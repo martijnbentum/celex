@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "celex"
+version = "0.0.2"
+description = "Parser for the CELEX Dutch lexical database"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.setuptools]
+packages = ["celex"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
