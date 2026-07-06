@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "celex"
-version = "0.0.2"
-description = "Parser for the CELEX Dutch lexical database"
+version = "0.0.3"
+description = "Parser for the CELEX lexical database (Dutch, English, German)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
