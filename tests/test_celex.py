@@ -160,6 +160,31 @@ def test_surface_phones_and_weight(dutch_header, german_header):
     assert syllable.surface_weight == 'heavy'
 
 
+def test_timing_tier(dutch_header):
+    word = parse_line(aagtappel, dutch_header, 'dutch')
+    tier = word.timing
+    assert tier is word.timing
+    assert tier.word is word
+    assert tier.pattern == 'VVCCVCVC'
+    assert [slot.index for slot in tier.slots] == list(range(8))
+    long_vowel = word.phones[0]
+    slots = tier.phone_to_slots(long_vowel)
+    assert len(slots) == 2
+    assert slots[0].phone is slots[1].phone
+    assert (slots[0].kind, slots[1].kind) == ('V', 'V')
+    shared = word.phones[4]
+    slots = tier.phone_to_slots(shared)
+    assert len(slots) == 1
+    assert slots[0].syllables == word.syllables[1:]
+    assert tier.slots[0].syllables == [word.syllables[0]]
+
+
+def test_timing_tier_syllabic_consonant(english_header):
+    word = parse_line(bottle, english_header, 'english')
+    assert word.timing.pattern == 'CVCS'
+    assert word.timing.slots[-1].phone.ipa == 'l̩'
+
+
 def test_multiword(dutch_header):
     word = parse_line(aap_na, dutch_header, 'dutch')
     assert word.multiword is True

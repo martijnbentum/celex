@@ -6,17 +6,16 @@ source, e.g. [A[p]@l]) are stored in the following syllable's onset
 and flagged; the surface_* properties expose the sharing without
 breaking the tree.
 
-Note for later: a richer alternative is a parallel timing tier in the
-spirit of CV phonology, a word-level sequence of cv slots linked
-many-to-many to phones. Ambisyllabicity and long vowels (one phone,
-two V slots) then become links instead of flags. Such a tier could
-exist in parallel to the current hierarchy without changing it: slots
-would reference phones and leave the phone-syllable-word links as they
-are. Not needed so far.
+A parallel timing tier in the spirit of CV phonology lives in
+timing_tier.py and is attached lazily as Word.timing: a word-level
+sequence of cv slots linked many-to-many to phones, where
+ambisyllabicity and length are links instead of flags. The slots
+reference phones and leave the phone-syllable-word links as they are.
 '''
 
 from phone_mapper import disc_to_ipa, ipa_to_definition
 
+from .timing_tier import TimingTier
 from .utils import B, GR, R, RE
 
 
@@ -66,6 +65,12 @@ class Word:
     def ipa(self):
         '''Space separated ipa symbols of all phones in the word.'''
         return ' '.join(phone.ipa for phone in self.phones)
+
+    @property
+    def timing(self):
+        '''The cv timing tier, built on first access.'''
+        if not hasattr(self, '_timing'): self._timing = TimingTier(self)
+        return self._timing
 
     @property
     def stress_pattern(self):
