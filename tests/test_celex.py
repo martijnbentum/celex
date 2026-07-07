@@ -179,6 +179,19 @@ def test_timing_tier(dutch_header):
     assert tier.slots[0].syllables == [word.syllables[0]]
 
 
+def test_timing_tier_syllable_to_slots(dutch_header):
+    word = parse_line(aagtappel, dutch_header, 'dutch')
+    tier = word.timing
+    first, second, third = word.syllables
+    assert [s.index for s in tier.syllable_to_slots(first)] == [0, 1, 2, 3]
+    assert [s.index for s in tier.syllable_to_slots(second)] == [4]
+    assert [s.index for s in tier.syllable_to_slots(third)] == [5, 6, 7]
+    surface = tier.surface_syllable_to_slots(second)
+    assert [s.index for s in surface] == [4, 5]
+    assert tier.surface_syllable_to_slots(first) == tier.slots[:4]
+    assert tier.surface_syllable_to_slots(third) == tier.slots[5:]
+
+
 def test_timing_tier_syllabic_consonant(english_header):
     word = parse_line(bottle, english_header, 'english')
     assert word.timing.pattern == 'CVCS'

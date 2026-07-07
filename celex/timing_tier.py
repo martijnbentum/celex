@@ -38,6 +38,24 @@ class TimingTier:
         diphthong, otherwise one.'''
         return [slot for slot in self.slots if slot.phone is phone]
 
+    def syllable_to_slots(self, syllable):
+        '''The slots of the syllable's own phones. Over all syllables
+        of the word this partitions the tier.'''
+        return self._phones_to_slots(syllable.phones)
+
+    def surface_syllable_to_slots(self, syllable):
+        '''The slots of the syllable's surface phones, including the
+        slot of a shared ambisyllabic phone. That slot appears in the
+        slot lists of both neighbouring syllables, so surface slot
+        counts can sum to more than the tier length.'''
+        return self._phones_to_slots(syllable.surface_phones)
+
+    def _phones_to_slots(self, phones):
+        slots = []
+        for slot in self.slots:
+            if slot.phone in phones: slots.append(slot)
+        return slots
+
 
 class Slot:
     '''One timing position on the cv tier of a word.'''

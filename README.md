@@ -65,6 +65,8 @@ tier.slots[0].kind       # 'V'
 tier.slots[0].phone      # long vowels link one phone to two slots
 tier.slots[4].syllables  # ambisyllabic: one slot, two syllables
 tier.phone_to_slots(word.phones[0])
+tier.syllable_to_slots(word.syllables[1])          # own slots
+tier.surface_syllable_to_slots(word.syllables[1])  # plus shared slot
 ```
 
 English entries can have multiple pronunciations; the first one is the
