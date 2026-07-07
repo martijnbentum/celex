@@ -52,7 +52,7 @@ phone.cv                 # 'C' | 'V' | 'VV' | 'S'
 phone.ambisyllabic       # True (written [A[p]@l] in the source)
 phone.prev, phone.next   # neighbouring phones in the word
 phone.syllable, phone.word
-phone.syllables          # two syllables when ambisyllabic, else one
+phone.surface_syllables  # two syllables when ambisyllabic, else one
 ```
 
 English entries can have multiple pronunciations; the first one is the

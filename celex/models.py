@@ -236,7 +236,7 @@ class Phone:
         return self.word.phones[self.index + 1]
 
     @property
-    def syllables(self):
+    def surface_syllables(self):
         '''The syllables this phone belongs to: two when ambisyllabic
         (the preceding syllable first), otherwise one.'''
         if self.syllable is None: return []

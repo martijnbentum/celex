@@ -151,8 +151,8 @@ def test_surface_phones_and_weight(dutch_header, german_header):
     assert first.surface_weight == first.weight
     assert third.surface_phones == third.phones
     shared = word.phones[4]
-    assert shared.syllables == [second, third]
-    assert word.phones[0].syllables == [first]
+    assert shared.surface_syllables == [second, third]
+    assert word.phones[0].surface_syllables == [first]
     word = parse_line(abbestellen, german_header, 'german')
     syllable = word.syllables[2]
     assert syllable.disc == 'StE'
