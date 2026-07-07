@@ -28,6 +28,12 @@ languages = {
     'english': (locations.english, locations.english_header),
     'german': (locations.german, locations.german_header)}
 
+_lemma_paths = {
+    'dutch':   locations.dutch_lemma,
+    'english': locations.english_lemma,
+    'german':  locations.german_lemma,
+}
+
 def _celex_token_types():
     types = {}
     for token, ipa in celex_to_ipa.items():
@@ -59,6 +65,8 @@ def load(language, verbose=True):
     if verbose and skipped:
         print(f'skipped {skipped} {language} entries without a '
             'parsable pronunciation')
+    for index, word in enumerate(words):
+        word.index = index
     return words
 
 
@@ -194,3 +202,93 @@ def _make_word(fields, header, syllables, language, status=None):
         syllables=syllables, multiword=' ' in word,
         pronunciation_status=status, disc=fields['disc'],
         cv=fields['cv'], celex=fields['celex'])
+
+
+def load_lemmas(language, verbose=True):
+    '''Parse the phonology lemma file (DPL/EPL/GPL) into a {id: Word} dict.
+    language:    dutch, english or german
+    verbose:     print a summary of skipped entries
+    '''
+    if language not in _lemma_paths:
+        raise ValueError(f'unknown language {language!r}')
+    path = _lemma_paths[language]
+    parsers = {
+        'dutch':   _parse_dutch_lemma_line,
+        'english': _parse_english_lemma_line,
+        'german':  _parse_german_lemma_line,
+    }
+    lemmas, skipped = {}, 0
+    with open(path, encoding='latin-1') as fin:
+        for line in fin:
+            result = parsers[language](line.rstrip('\n'))
+            if result is None:
+                skipped += 1
+            else:
+                lemma_id, word = result
+                lemmas[lemma_id] = word
+    if verbose and skipped:
+        print(f'skipped {skipped} {language} lemma entries without a '
+            'parsable pronunciation')
+    return lemmas
+
+
+def _parse_dutch_lemma_line(line):
+    '''DPL: IdNum / Head / Inl / PhonStrsDISC / PhonCVBr / PhonSylBCLX / ...'''
+    parts = line.split('\\')
+    if len(parts) < 6: return None
+    try:
+        lemma_id = int(parts[0])
+        disc, cv, celex = parts[3], parts[4], parts[5]
+        syllables = parse_pronunciation(disc, cv, celex)
+    except (ValueError, ParseError):
+        return None
+    word = Word(word=parts[1], id_number=lemma_id, id_number_lemma=lemma_id,
+        frequency=int(parts[2]) if parts[2].isdigit() else 0,
+        language='dutch', syllables=syllables)
+    return lemma_id, word
+
+
+def _parse_german_lemma_line(line):
+    '''GPL: IdNum / Head / Mann / PhonStrsDISC / PhonSylBCLX / ... / PhonCVBr / ...
+    Field order differs from DPL: celex is field 4 (index 4), cv is field 8 (index 7).
+    '''
+    parts = line.split('\\')
+    if len(parts) < 8: return None
+    try:
+        lemma_id = int(parts[0])
+        disc, celex, cv = parts[3], parts[4], parts[7]
+        syllables = parse_pronunciation(disc, cv, celex)
+    except (ValueError, ParseError):
+        return None
+    word = Word(word=parts[1], id_number=lemma_id, id_number_lemma=lemma_id,
+        frequency=int(parts[2]) if parts[2].isdigit() else 0,
+        language='german', syllables=syllables)
+    return lemma_id, word
+
+
+def _parse_english_lemma_line(line):
+    '''EPL: IdNum / Head / Cob / PronCnt / PronStatus / PhonStrsDISC / PhonCVBr / PhonSylBCLX ...
+    Same multi-pronunciation layout as EPW but without IdNumLemma.
+    '''
+    parts = line.split('\\')
+    if len(parts) < 8: return None
+    try:
+        lemma_id = int(parts[0])
+        cob = int(parts[2]) if parts[2].isdigit() else 0
+    except ValueError:
+        return None
+    count = (len(parts) - 4) // 4
+    words = []
+    for i in range(count):
+        status, disc, cv, celex = parts[4 + 4 * i:8 + 4 * i]
+        try:
+            syllables = parse_pronunciation(disc, cv, celex)
+        except ParseError:
+            continue
+        words.append(Word(word=parts[1], id_number=lemma_id,
+            id_number_lemma=lemma_id, frequency=cob, language='english',
+            syllables=syllables, pronunciation_status=status))
+    if not words: return None
+    word = words[0]
+    word.pronunciations = words[1:]
+    return lemma_id, word

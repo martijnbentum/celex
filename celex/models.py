@@ -43,6 +43,10 @@ class Word:
         self.disc = disc
         self.cv = cv
         self.celex = celex
+        self.lexicon = None
+        self.index = None
+        self.lemma = None
+        self.siblings = None
         self.syllables = syllables if syllables else []
         self.pronunciations = []
         self.phones = []
@@ -71,6 +75,28 @@ class Word:
         '''The cv timing tier, built on first access.'''
         if not hasattr(self, '_timing'): self._timing = TimingTier(self)
         return self._timing
+
+    @property
+    def prev(self):
+        '''The previous word in the lexicon, None at the start.'''
+        if self.lexicon is None or not self.index: return None
+        return self.lexicon.words[self.index - 1]
+
+    @property
+    def next(self):
+        '''The next word in the lexicon, None at the end.'''
+        if self.lexicon is None or self.index is None: return None
+        if self.index + 1 >= len(self.lexicon.words): return None
+        return self.lexicon.words[self.index + 1]
+
+    @property
+    def family(self):
+        '''[lemma (DPL entry), this word, other siblings].
+        Lemma is omitted when not resolved (not in the loaded lemma file).'''
+        siblings = self.siblings or []
+        if self.lemma is None:
+            return [self] + siblings
+        return [self.lemma, self] + siblings
 
     @property
     def stress_pattern(self):

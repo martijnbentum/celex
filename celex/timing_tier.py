@@ -72,6 +72,19 @@ class Slot:
         return m
 
     @property
+    def prev(self):
+        '''The previous slot on the timing tier, None at the word start.'''
+        if not self.index: return None
+        return self.phone.word.timing.slots[self.index - 1]
+
+    @property
+    def next(self):
+        '''The next slot on the timing tier, None at the word end.'''
+        tier = self.phone.word.timing
+        if self.index + 1 >= len(tier.slots): return None
+        return tier.slots[self.index + 1]
+
+    @property
     def syllables(self):
         '''One syllable, or two for an ambisyllabic consonant slot.'''
         return self.phone.surface_syllables

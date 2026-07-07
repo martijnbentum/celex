@@ -6,4 +6,5 @@ uv.lock
 .env
 AGENTS.md
 data/
+CELEX_DATA/
 *.swp
