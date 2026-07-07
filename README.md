@@ -133,6 +133,28 @@ tier.syllable_to_slots(word.syllables[1])          # own slots
 tier.surface_syllable_to_slots(word.syllables[1])  # plus shared slot
 ```
 
+### Syllabifier training data
+
+`training_examples` yields the phones of each word with per position
+syllable boundary labels, for training a syllabifier on CELEX
+boundaries (e.g. in
+[dutch_syllabifier](https://github.com/martijnbentum/dutch-syllabifier)):
+
+```python
+from celex import training_examples, word_to_example
+
+for phones, labels, word in training_examples('dutch'):
+    phones               # ['aː', 'x', 'j', 'ə']
+    labels               # [0, 1, 0]  (1: boundary after this phone)
+    word                 # the Word object (lemma id, frequency, ...)
+
+word_to_example(word)    # (phones, labels) for a single Word
+```
+
+Multiword entries are skipped unless `multiword=True`. Ambisyllabic
+phones follow the disc column split: they count in the syllable that
+stores them.
+
 English entries can have multiple pronunciations; the first one is the
 returned `Word` and the others are `Word` objects in
 `word.pronunciations`.
