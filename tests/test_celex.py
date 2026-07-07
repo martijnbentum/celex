@@ -229,6 +229,30 @@ def test_load_collects_bad_lines(monkeypatch, tmp_path, dutch_header):
         'line': aafje, 'error': 'empty pronunciation'}]
 
 
+def test_load_collects_malformed_bad_lines(monkeypatch, tmp_path,
+        dutch_header):
+    bad_integer = aagje.replace('5\\Aagje', 'not-int\\Aagje')
+    missing_fields = '1\\missing'
+    data_file = tmp_path / 'DPW.CD'
+    data_file.write_text(bad_integer + '\n' + missing_fields + '\n',
+        encoding='latin-1')
+    header_file = tmp_path / 'dutch_header'
+    header_file.write_text(' '.join(dutch_header), encoding='latin-1')
+    monkeypatch.setitem(languages, 'mini', (data_file, header_file))
+    bad_lines = []
+    try:
+        words = load('mini', verbose=False, bad_lines=bad_lines)
+    finally:
+        languages.pop('mini')
+    assert words == []
+    assert bad_lines[0]['line_number'] == 1
+    assert bad_lines[0]['error'] == (
+        "invalid integer in 'id_number': 'not-int'")
+    assert bad_lines[1]['line_number'] == 2
+    assert bad_lines[1]['error'] == (
+        "missing required column 'id_number_lemma'")
+
+
 def test_affricate_versus_cluster(dutch_header):
     '''ts in plaats is t plus s, disc decides the tokenization.'''
     word = parse_line(plaats, dutch_header, 'dutch')

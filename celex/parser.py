@@ -34,6 +34,12 @@ _lemma_paths = {
     'german':  locations.german_lemma,
 }
 
+_required_fields = {
+    'dutch': ('id_number', 'id_number_lemma', 'word', 'disc', 'cv', 'celex'),
+    'german': ('id_number', 'id_number_lemma', 'word', 'disc', 'cv', 'celex'),
+}
+
+
 def _celex_token_types():
     types = {}
     for token, ipa in celex_to_ipa.items():
@@ -112,6 +118,10 @@ def _parse_line_with_error(line, header, language):
         return _parse_line(line, header, language), None
     except ParseError as error:
         return None, str(error)
+    except KeyError as error:
+        return None, f'missing required column {error.args[0]!r}'
+    except ValueError as error:
+        return None, str(error)
 
 
 def _parse_line(line, header, language):
@@ -119,6 +129,10 @@ def _parse_line(line, header, language):
     parts = line.split('\\')
     if language == 'english': return _parse_english_line(parts, header)
     fields = dict(zip(header, parts))
+    required = _required_fields.get(language, _required_fields['dutch'])
+    for field in required:
+        if field not in fields:
+            raise ParseError(f'missing required column {field!r}')
     syllables = parse_pronunciation(fields['disc'], fields['cv'],
         fields['celex'])
     return _make_word(fields, header, syllables, language)
@@ -243,12 +257,21 @@ def _parse_english_line(parts, header):
 def _make_word(fields, header, syllables, language, status=None):
     '''Build a Word from parsed fields; header[2] is the frequency.'''
     word = fields['word']
-    return Word(word=word, id_number=int(fields['id_number']),
-        id_number_lemma=int(fields['id_number_lemma']),
-        frequency=int(fields[header[2]]), language=language,
+    return Word(word=word, id_number=_int_field(fields, 'id_number'),
+        id_number_lemma=_int_field(fields, 'id_number_lemma'),
+        frequency=_int_field(fields, header[2]), language=language,
         syllables=syllables, multiword=' ' in word,
         pronunciation_status=status, disc=fields['disc'],
         cv=fields['cv'], celex=fields['celex'])
+
+
+def _int_field(fields, name):
+    try:
+        return int(fields[name])
+    except KeyError:
+        raise ParseError(f'missing required column {name!r}')
+    except ValueError:
+        raise ParseError(f'invalid integer in {name!r}: {fields[name]!r}')
 
 
 def load_lemmas(language, verbose=True):
