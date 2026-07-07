@@ -42,6 +42,39 @@ uv sync
 
 ## Usage
 
+### Lexicon
+
+```python
+from celex import Lexicon
+
+lex = Lexicon('dutch')           # also: 'english', 'german'
+lex.words                        # list of Word objects in file order
+
+# search — all arguments are optional and combined with AND
+lex.search_words(word='lopen')                        # exact orthographic match
+lex.search_words(ipa='aː x')                          # IPA substring (spaces optional)
+lex.search_words(stress_pattern='s w')                # exact stress pattern
+lex.search_words(freq_min=1000, freq_max=5000)        # frequency range
+lex.search_words(ipa='p', stress_pattern='s w w')     # combined
+
+lex.search_syllables(ipa='aː')                        # IPA substring
+lex.search_syllables(stress='strong')                 # 'strong' | 'weak' | 'secondary'
+
+lex.search_phones(ipa='p')                            # exact IPA symbol
+lex.search_phones(position='onset')                   # 'onset' | 'nucleus' | 'coda'
+lex.search_phones(ambisyllabic=True)
+lex.search_phones(stressed=True)                      # phone in a stressed syllable
+
+# word navigation and lemma links
+word = lex.search_words(word='loopt')[0]
+word.prev, word.next             # neighbours in file order
+word.lemma                       # Word from the phonology lemma file (DPL/EPL/GPL)
+word.siblings                    # other DPW words sharing the same lemma id
+word.family                      # [lemma, word, *siblings]
+```
+
+### Low-level access
+
 ```python
 import celex
 
