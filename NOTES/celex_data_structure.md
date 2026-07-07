@@ -8,15 +8,11 @@ file type.
 
 ## data/ directory
 
-`data/` is also gitignored (licensed data). It contains:
-
-- `DPW.CD`, `EPW.CD`, `GPW.CD` — older copies of the phonology word-form
-  files, superseded by `CELEX_DATA/*/DPW/` etc.
-- `dutch_header`, `english_header`, `german_header` — hand-crafted column
-  name files used by the parser to map DPW fields by name. These are the
-  only files in `data/` that are still actively used; the `.CD` files there
-  are no longer read.
-- `OLD/EPL/` — an older copy of the English phonology lemma file.
+`data/` is gitignored and **no longer used**. It can be deleted.
+It previously held older copies of `DPW.CD`, `EPW.CD`, `GPW.CD` and
+`OLD/EPL/`, all superseded by `CELEX_DATA/`. The column-name header files
+that were in `data/` have been moved into the package (`celex/*_header`)
+and are now committed alongside the source code.
 
 ## CELEX_DATA/DUTCH/ folders
 

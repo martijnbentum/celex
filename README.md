@@ -8,6 +8,31 @@ stress, syllable structure (onset, nucleus, coda, rhyme) and
 ambisyllabicity. IPA symbols come from
 [phone_mapper](https://github.com/martijnbentum/phone_mapper).
 
+## CELEX data
+
+This package requires the CELEX-2 CD-ROM data (licensed, not included).
+Place the unzipped disc contents at `CELEX_DATA/` in the repository root
+so the directory structure looks like:
+
+```
+CELEX_DATA/
+  DUTCH/
+    DPW/DPW.CD      ← phonology word forms (loaded by Lexicon/load)
+    DPL/DPL.CD      ← phonology lemmas    (loaded for word.lemma)
+    ...
+  ENGLISH/
+    EPW/EPW.CD
+    EPL/EPL.CD
+    ...
+  GERMAN/
+    GPW/GPW.CD
+    GPL/GPL.CD
+    ...
+```
+
+`CELEX_DATA/` is gitignored. See `NOTES/celex_data_structure.md` for a
+description of all subfolders.
+
 ## Installation
 
 ```bash
