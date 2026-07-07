@@ -28,8 +28,14 @@ languages = {
     'english': (locations.english, locations.english_header),
     'german': (locations.german, locations.german_header)}
 
-celex_token_types = {token: phoneme_type(ipa)
-    for token, ipa in celex_to_ipa.items()}
+def _celex_token_types():
+    types = {}
+    for token, ipa in celex_to_ipa.items():
+        types[token] = phoneme_type(ipa)
+    return types
+
+
+celex_token_types = _celex_token_types()
 max_token_length = max(len(token) for token in celex_token_types)
 
 
@@ -74,8 +80,9 @@ def parse_pronunciation(disc, cv, celex):
     Raises ParseError if the columns cannot be aligned.'''
     if not disc: raise ParseError('empty pronunciation')
     syllables = _disc_syllables(disc)
-    phones = [phone for syllable in syllables
-        for phone in syllable.phones]
+    phones = []
+    for syllable in syllables:
+        phones.extend(syllable.phones)
     characters = _celex_characters(celex)
     tokens = _align_celex(phones, characters)
     if tokens is None:
@@ -96,8 +103,7 @@ def _disc_syllables(disc):
         stress = 'weak'
         if disc_syllable.startswith("'"): stress = 'strong'
         elif disc_syllable.startswith('"'): stress = 'secondary'
-        phones = [_make_phone(character)
-            for character in disc_syllable.lstrip('\'"')]
+        phones = [_make_phone(c) for c in disc_syllable.lstrip('\'"')]
         syllables.append(Syllable(phones=phones, stress=stress))
     return syllables
 
@@ -135,13 +141,11 @@ def _align_celex(phones, characters, phone_index=0, character_index=0):
     for length in range(max_token_length, 0, -1):
         end = character_index + length
         if end > len(characters): continue
-        token = ''.join(character
-            for character, _ in characters[character_index:end])
+        token = ''.join(c for c, _ in characters[character_index:end])
         if celex_token_types.get(token) != wanted: continue
         rest = _align_celex(phones, characters, phone_index + 1, end)
         if rest is None: continue
-        ambisyllabic = any(nested
-            for _, nested in characters[character_index:end])
+        ambisyllabic = any(n for _, n in characters[character_index:end])
         return [(token, ambisyllabic)] + rest
     return None
 

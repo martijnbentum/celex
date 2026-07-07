@@ -36,6 +36,8 @@ syllable.onset           # phones before the nucleus
 syllable.nucleus         # vowel or syllabic consonant phones
 syllable.coda            # phones after the nucleus
 syllable.rhyme           # nucleus + coda
+syllable.weight          # 'light' | 'heavy' | 'superheavy'
+                         # rhyme cv slots: 1, 2, 3+; onset is weightless
 
 phone = word.phones[4]
 phone.disc               # 'p'

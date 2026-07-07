@@ -37,6 +37,7 @@ abbestellen = ('3\\abbestellen\\1\\35\\\'&p-b@-StE-l@n\\[ap][b@][StE[l]@n]'
     '\\[VC][CV][CCV[C]VC]')
 annonciere = ("13\\annonciere\\0\\182\\&-n~-'si-r@\\[a[n]O~:][si:][r@]"
     "\\[V[C]VV][CVV][CV]")
+pst = "247576\\pst\\15\\81791\\'pst\\[CCC]\\[pst]"
 
 
 def test_import():
@@ -70,7 +71,6 @@ def test_syllable_attributes(dutch_header):
     assert first.cv == 'VVC'
     assert first.word is word
     assert (first.index, second.index) == (0, 1)
-    assert first.weight is None
 
 
 def test_syllable_structure(dutch_header):
@@ -83,6 +83,24 @@ def test_syllable_structure(dutch_header):
     syllable = word.syllables[1]
     assert [p.disc for p in syllable.onset] == ['j']
     assert [p.disc for p in syllable.coda] == []
+
+
+def test_syllable_weight(dutch_header):
+    '''Weight counts the cv slots in the rhyme, the onset is
+    weightless: 1 slot light, 2 heavy, 3 or more superheavy.'''
+    word = parse_line(aagje, dutch_header, 'dutch')
+    assert word.syllables[0].weight == 'superheavy'    # a:x = VV C
+    assert word.syllables[1].weight == 'light'         # j@, rhyme @ = V
+    word = parse_line(aagtappel, dutch_header, 'dutch')
+    assert word.syllables[1].weight == 'light'         # A = V
+    assert word.syllables[2].weight == 'heavy'         # p@l, rhyme @l
+    word = parse_line(pst, dutch_header, 'dutch')
+    assert word.syllables[0].weight is None            # no nucleus
+
+
+def test_syllabic_consonant_weight(english_header):
+    word = parse_line(bottle, english_header, 'english')
+    assert word.syllables[1].weight == 'light'         # tP, rhyme S
 
 
 def test_phone_attributes(dutch_header):

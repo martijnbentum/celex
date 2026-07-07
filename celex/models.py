@@ -56,8 +56,7 @@ class Word:
     def stress_pattern(self):
         '''Space separated stress code per syllable: s, w or ss.'''
         codes = {'strong': 's', 'weak': 'w', 'secondary': 'ss'}
-        return ' '.join(codes[syllable.stress]
-            for syllable in self.syllables)
+        return ' '.join(codes[s.stress] for s in self.syllables)
 
 
 class Syllable:
@@ -123,8 +122,15 @@ class Syllable:
 
     @property
     def weight(self):
-        '''Syllable weight based on cv slots; to be determined later.'''
-        return None
+        '''light, heavy or superheavy, from the cv slots in the rhyme
+        (the onset is weightless). None for the rare syllable without
+        a nucleus, e.g. pst.'''
+        rhyme = self.rhyme
+        if not rhyme: return None
+        slots = len(''.join(phone.cv for phone in rhyme))
+        if slots == 1: return 'light'
+        if slots == 2: return 'heavy'
+        return 'superheavy'
 
 
 class Phone:
