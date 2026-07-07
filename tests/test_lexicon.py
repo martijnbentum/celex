@@ -64,6 +64,25 @@ def test_words_linked_to_lexicon(small_lexicon):
         assert word.lexicon is small_lexicon
 
 
+def test_lexicon_collects_bad_celex_lines(monkeypatch):
+    import celex.lexicon
+
+    def fake_load(language, bad_lines=None):
+        if bad_lines is not None:
+            bad_lines.append({'language': language, 'line_number': 7,
+                'line': 'bad', 'error': 'empty pronunciation'})
+        return _make_words()[:1]
+
+    monkeypatch.setattr(celex.lexicon, 'load', fake_load)
+    monkeypatch.setattr(celex.lexicon, 'load_lemmas', lambda language,
+        verbose=False: {})
+    lexicon = Lexicon('dutch')
+    assert lexicon.bad_celex_lines == [{'language': 'dutch',
+        'line_number': 7, 'line': 'bad', 'error': 'empty pronunciation'}]
+    lexicon.bad_celex_lines.append({'language': 'dutch'})
+    assert len(lexicon.bad_celex_lines) == 1
+
+
 def test_word_index(small_lexicon):
     for i, word in enumerate(small_lexicon.words):
         assert word.index == i
@@ -106,6 +125,21 @@ def test_lemma_none_without_lemma_file(small_lexicon):
         assert word.lemma is None
 
 
+def test_missing_lemma_file_warns(monkeypatch, tmp_path):
+    import celex.parser
+
+    lexicon = Lexicon._from_words(_make_words())
+    missing = tmp_path / 'missing' / 'DPL.CD'
+    monkeypatch.setitem(celex.parser._lemma_paths, 'test', missing)
+    with pytest.warns(RuntimeWarning) as warnings:
+        lexicon._link_lemmas()
+    message = str(warnings[0].message)
+    assert 'CELEX lemma file not found for test' in message
+    assert 'word.lemma and word.family will be None' in message
+    assert all(word.lemma is None for word in lexicon.words)
+    assert all(word.family is None for word in lexicon.words)
+
+
 # ---------------------------------------------------------------------------
 # Siblings
 # ---------------------------------------------------------------------------
@@ -130,8 +164,7 @@ def test_siblings_empty_for_unique_lemma_group(small_lexicon):
 
 def test_family_no_lemma_file(small_lexicon):
     aagje_word = next(w for w in small_lexicon.words if w.word == 'Aagje')
-    # No lemmas loaded: family starts with self
-    assert aagje_word.family == [aagje_word]
+    assert aagje_word.family is None
 
 
 def test_family_lemma_first(small_lexicon_with_lemmas):
@@ -157,6 +190,16 @@ def test_family_lemma_plus_self_only_when_no_siblings(small_lexicon_with_lemmas)
     assert fam[0] is aagje_word.lemma
     assert fam[1] is aagje_word
     assert len(fam) == 2
+
+
+def test_siblings_ignore_non_positive_lemma_ids():
+    lexicon = Lexicon._from_words(_make_words())
+    word, sibling = lexicon.words[:2]
+    word.id_number_lemma = 0
+    sibling.id_number_lemma = 0
+    lexicon._link_siblings()
+    assert word.siblings == []
+    assert sibling.siblings == []
 
 
 # ---------------------------------------------------------------------------
@@ -248,6 +291,14 @@ def test_search_phones_position_nucleus(small_lexicon):
 def test_search_phones_position_coda(small_lexicon):
     results = small_lexicon.search_phones(position='coda')
     assert all(p.coda for p in results)
+
+
+def test_search_phones_invalid_position(small_lexicon):
+    with pytest.raises(ValueError) as excinfo:
+        small_lexicon.search_phones(position='word')
+    message = str(excinfo.value)
+    assert "unknown phone position 'word'" in message
+    assert "'coda', 'nucleus', 'onset'" in message
 
 
 def test_search_phones_ambisyllabic(small_lexicon):

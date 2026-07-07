@@ -1,8 +1,20 @@
 '''Lexicon: a loaded CELEX language file with word/syllable/phone search.'''
 
+import warnings
 from collections import defaultdict
 
 from .parser import load, load_lemmas
+
+
+_LOAD_LEMMAS = object()
+_PHONE_POSITIONS = {'coda', 'nucleus', 'onset'}
+
+
+def _validate_phone_position(position):
+    if position is None or position in _PHONE_POSITIONS:
+        return
+    valid = "', '".join(sorted(_PHONE_POSITIONS))
+    raise ValueError(f"unknown phone position {position!r}, expected '{valid}'")
 
 
 class Lexicon:
@@ -11,8 +23,11 @@ class Lexicon:
 
     def __init__(self, language_name):
         self.language = language_name
-        self.words = load(language_name)
-        self._link()
+        self._bad_celex_lines = []
+        self.words = load(language_name, bad_lines=self._bad_celex_lines)
+        self._link_words()
+        self._link_siblings()
+        self._link_lemmas()
 
     @classmethod
     def _from_words(cls, words, language='test', lemmas=None):
@@ -21,25 +36,53 @@ class Lexicon:
         '''
         lexicon = object.__new__(cls)
         lexicon.language = language
+        lexicon._bad_celex_lines = []
         lexicon.words = words
-        lexicon._link(lemmas=lemmas or {})
+        lexicon._link_words()
+        lexicon._link_siblings()
+        lexicon._link_lemmas(lemmas=lemmas or {})
         return lexicon
 
-    def _link(self, lemmas=None):
-        if lemmas is None:
-            lemmas = load_lemmas(self.language, verbose=False)
-        groups = defaultdict(list)
+    def _link_words(self):
+        '''Attach each word to this lexicon and assign file-order indices.'''
         for index, word in enumerate(self.words):
             word.lexicon = self
             word.index = index
-            word.lemma = lemmas.get(word.id_number_lemma)
-            groups[word.id_number_lemma].append(word)
+
+    def _link_siblings(self):
+        '''Link words sharing a positive lemma id.'''
+        groups = defaultdict(list)
         for word in self.words:
+            if word.id_number_lemma and word.id_number_lemma > 0:
+                groups[word.id_number_lemma].append(word)
+        for word in self.words:
+            if not word.id_number_lemma or word.id_number_lemma <= 0:
+                word.siblings = []
+                continue
             word.siblings = [w for w in groups[word.id_number_lemma]
                 if w is not word]
 
+    def _link_lemmas(self, lemmas=_LOAD_LEMMAS):
+        '''Attach lemma Word objects when lemma files are available.'''
+        if lemmas is _LOAD_LEMMAS:
+            try:
+                lemmas = load_lemmas(self.language, verbose=False)
+            except FileNotFoundError as error:
+                m = str(error)
+                m += '\n\nLemma files are optional for Lexicon loading; '
+                m += 'word.lemma and word.family will be None.'
+                warnings.warn(m, RuntimeWarning, stacklevel=2)
+                lemmas = {}
+        for word in self.words:
+            word.lemma = lemmas.get(word.id_number_lemma)
+
     def __repr__(self):
         return f'Lexicon({self.language!r}, {len(self.words)} words)'
+
+    @property
+    def bad_celex_lines(self):
+        '''Rows skipped while parsing the word-form file.'''
+        return list(self._bad_celex_lines)
 
     @property
     def syllables(self):
@@ -103,6 +146,7 @@ class Lexicon:
         ambisyllabic:  True / False
         stressed:      True if phone must be in a stressed syllable
         '''
+        _validate_phone_position(position)
         results = self.phones
         if ipa is not None:
             results = [p for p in results if p.ipa == ipa]

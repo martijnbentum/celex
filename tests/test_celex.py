@@ -1,7 +1,10 @@
+import importlib
+
 import pytest
 
+import celex.locations
 from celex import ParseError, parse_line, parse_pronunciation
-from celex.parser import languages
+from celex.parser import languages, load, load_lemmas
 
 
 def read_header(language):
@@ -210,6 +213,22 @@ def test_empty_pronunciation_skipped(dutch_header):
     assert parse_line(aafje, dutch_header, 'dutch') is None
 
 
+def test_load_collects_bad_lines(monkeypatch, tmp_path, dutch_header):
+    data_file = tmp_path / 'DPW.CD'
+    data_file.write_text(aagje + '\n' + aafje + '\n', encoding='latin-1')
+    header_file = tmp_path / 'dutch_header'
+    header_file.write_text(' '.join(dutch_header), encoding='latin-1')
+    monkeypatch.setitem(languages, 'mini', (data_file, header_file))
+    bad_lines = []
+    try:
+        words = load('mini', verbose=False, bad_lines=bad_lines)
+    finally:
+        languages.pop('mini')
+    assert [word.word for word in words] == ['Aagje']
+    assert bad_lines == [{'language': 'mini', 'line_number': 2,
+        'line': aafje, 'error': 'empty pronunciation'}]
+
+
 def test_affricate_versus_cluster(dutch_header):
     '''ts in plaats is t plus s, disc decides the tokenization.'''
     word = parse_line(plaats, dutch_header, 'dutch')
@@ -273,6 +292,55 @@ def test_misaligned_columns_raise():
 
 
 def test_load_language_validation():
-    from celex import load
     with pytest.raises(ValueError):
         load('french')
+
+
+def test_load_missing_data_message(monkeypatch, tmp_path):
+    missing = tmp_path / 'missing' / 'DPW.CD'
+    monkeypatch.setitem(languages, 'missing', (missing, languages['dutch'][1]))
+    try:
+        with pytest.raises(FileNotFoundError) as excinfo:
+            load('missing')
+    finally:
+        languages.pop('missing')
+    message = str(excinfo.value)
+    assert 'CELEX word-form file not found for missing' in message
+    assert 'Set the CELEX_DATA environment variable' in message
+    assert 'See README.md for setup instructions.' in message
+
+
+def test_load_lemmas_missing_data_message(monkeypatch, tmp_path):
+    import celex.parser
+
+    missing = tmp_path / 'missing' / 'DPL.CD'
+    monkeypatch.setitem(celex.parser._lemma_paths, 'dutch', missing)
+    try:
+        with pytest.raises(FileNotFoundError) as excinfo:
+            load_lemmas('dutch')
+    finally:
+        celex.parser._lemma_paths['dutch'] = celex.locations.dutch_lemma
+    message = str(excinfo.value)
+    assert 'CELEX lemma file not found for dutch' in message
+    assert 'Set the CELEX_DATA environment variable' in message
+
+
+def test_celex_data_path_default(monkeypatch):
+    monkeypatch.delenv('CELEX_DATA', raising=False)
+    locations = importlib.reload(celex.locations)
+    try:
+        assert locations.celex_data_path().name == 'CELEX_DATA'
+        assert locations.dutch.parent.name == 'DPW'
+    finally:
+        importlib.reload(celex.locations)
+
+
+def test_celex_data_path_env(monkeypatch, tmp_path):
+    data_path = tmp_path / 'CELEX_DATA'
+    monkeypatch.setenv('CELEX_DATA', str(data_path))
+    locations = importlib.reload(celex.locations)
+    try:
+        assert locations.celex_data_path() == data_path
+        assert locations.dutch == data_path / 'DUTCH' / 'DPW' / 'DPW.CD'
+    finally:
+        importlib.reload(celex.locations)

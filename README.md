@@ -12,7 +12,13 @@ ambisyllabicity. IPA symbols come from
 
 This package requires the CELEX-2 CD-ROM data (licensed, not included).
 Place the unzipped disc contents at `CELEX_DATA/` in the repository root
-so the directory structure looks like:
+or set the `CELEX_DATA` environment variable to that directory:
+
+```bash
+export CELEX_DATA=/path/to/CELEX_DATA
+```
+
+The directory structure should look like:
 
 ```
 CELEX_DATA/

@@ -4,20 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "celex"
-version = "0.0.17"
+version = "0.0.18"
 description = "Parser for the CELEX lexical database (Dutch, English, German)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "phone-mapper",
+    "phone-mapper @ git+https://github.com/martijnbentum/phone_mapper.git",
 ]
 
 [tool.setuptools]
 packages = ["celex"]
 package-data = {"celex" = ["dutch_header", "english_header", "german_header"]}
-
-[tool.uv.sources]
-phone-mapper = { git = "https://github.com/martijnbentum/phone_mapper" }
 
 [dependency-groups]
 dev = [

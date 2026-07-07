@@ -1,7 +1,17 @@
+import os
 from pathlib import Path
 
-_pkg   = Path(__file__).parent
-_celex = Path(__file__).parent.parent / 'CELEX_DATA'
+
+def celex_data_path():
+    '''Return the root directory holding licensed CELEX data.'''
+    configured = os.environ.get('CELEX_DATA')
+    if configured:
+        return Path(configured).expanduser()
+    return Path(__file__).parent.parent / 'CELEX_DATA'
+
+
+_pkg = Path(__file__).parent
+_celex = celex_data_path()
 
 # Phonology word-form files (DPW / EPW / GPW)
 dutch   = _celex / 'DUTCH'   / 'DPW' / 'DPW.CD'

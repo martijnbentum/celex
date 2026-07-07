@@ -92,10 +92,10 @@ class Word:
     @property
     def family(self):
         '''[lemma (DPL entry), this word, other siblings].
-        Lemma is omitted when not resolved (not in the loaded lemma file).'''
-        siblings = self.siblings or []
+        None when the lemma was not resolved.'''
         if self.lemma is None:
-            return [self] + siblings
+            return None
+        siblings = self.siblings or []
         return [self.lemma, self] + siblings
 
     @property

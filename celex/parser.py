@@ -45,10 +45,11 @@ celex_token_types = _celex_token_types()
 max_token_length = max(len(token) for token in celex_token_types)
 
 
-def load(language, verbose=True):
+def load(language, verbose=True, bad_lines=None):
     '''Parse the phonology file of a language into Word objects.
     language:    dutch, english or german
     verbose:     print a summary of skipped entries
+    bad_lines:   optional list collecting skipped line details
     '''
     if language not in languages:
         m = f'unknown language {language!r}, '
@@ -57,11 +58,18 @@ def load(language, verbose=True):
     path, header_path = languages[language]
     header = header_path.read_text().split()
     words, skipped = [], 0
-    with open(path, encoding='latin-1') as fin:
-        for line in fin:
-            word = parse_line(line.rstrip('\n'), header, language)
-            if word is None: skipped += 1
-            else: words.append(word)
+    with _open_celex_file(language, path, 'word-form') as fin:
+        for line_number, line in enumerate(fin, start=1):
+            text = line.rstrip('\n')
+            word, error = _parse_line_with_error(text, header, language)
+            if word is None:
+                skipped += 1
+                if bad_lines is not None:
+                    bad_lines.append({'language': language,
+                        'line_number': line_number, 'line': text,
+                        'error': error})
+            else:
+                words.append(word)
     if verbose and skipped:
         print(f'skipped {skipped} {language} entries without a '
             'parsable pronunciation')
@@ -70,16 +78,49 @@ def load(language, verbose=True):
     return words
 
 
+def _missing_data_message(language, path, file_kind):
+    m = f'CELEX {file_kind} file not found for {language}: {path}\n\n'
+    m += 'Set the CELEX_DATA environment variable to the unzipped '
+    m += 'CELEX-2 data directory, or place CELEX_DATA/ in the '
+    m += 'repository root. Expected layout:\n\n'
+    m += '  CELEX_DATA/\n'
+    m += '    DUTCH/DPW/DPW.CD\n'
+    m += '    DUTCH/DPL/DPL.CD\n'
+    m += '    ENGLISH/EPW/EPW.CD\n'
+    m += '    ENGLISH/EPL/EPL.CD\n'
+    m += '    GERMAN/GPW/GPW.CD\n'
+    m += '    GERMAN/GPL/GPL.CD\n\n'
+    m += 'See README.md for setup instructions.'
+    return m
+
+
+def _open_celex_file(language, path, file_kind):
+    if not path.exists():
+        raise FileNotFoundError(_missing_data_message(language, path,
+            file_kind))
+    return open(path, encoding='latin-1')
+
+
 def parse_line(line, header, language):
     '''Parse one data file line into a Word, or None on failure.'''
+    word, _ = _parse_line_with_error(line, header, language)
+    return word
+
+
+def _parse_line_with_error(line, header, language):
+    try:
+        return _parse_line(line, header, language), None
+    except ParseError as error:
+        return None, str(error)
+
+
+def _parse_line(line, header, language):
+    '''Parse one data file line into a Word. Raises ParseError on failure.'''
     parts = line.split('\\')
     if language == 'english': return _parse_english_line(parts, header)
     fields = dict(zip(header, parts))
-    try:
-        syllables = parse_pronunciation(fields['disc'], fields['cv'],
-            fields['celex'])
-    except ParseError:
-        return None
+    syllables = parse_pronunciation(fields['disc'], fields['cv'],
+        fields['celex'])
     return _make_word(fields, header, syllables, language)
 
 
@@ -178,16 +219,22 @@ def _parse_english_line(parts, header):
     base = dict(zip(header[:5], parts[:5]))
     count = (len(parts) - 5) // 4
     words = []
+    errors = []
     for i in range(count):
         status, disc, cv, celex = parts[5 + 4 * i:9 + 4 * i]
         try:
             syllables = parse_pronunciation(disc, cv, celex)
-        except ParseError:
+        except ParseError as error:
+            errors.append(str(error))
             continue
         fields = dict(base, disc=disc, cv=cv, celex=celex)
         words.append(_make_word(fields, header, syllables, 'english',
             status=status))
-    if not words: return None
+    if not words:
+        if not errors: raise ParseError('no pronunciation groups found')
+        m = 'no parsable english pronunciation'
+        m += f': {"; ".join(errors)}'
+        raise ParseError(m)
     word = words[0]
     word.pronunciations = words[1:]
     return word
@@ -218,7 +265,7 @@ def load_lemmas(language, verbose=True):
         'german':  _parse_german_lemma_line,
     }
     lemmas, skipped = {}, 0
-    with open(path, encoding='latin-1') as fin:
+    with _open_celex_file(language, path, 'lemma') as fin:
         for line in fin:
             result = parsers[language](line.rstrip('\n'))
             if result is None:
