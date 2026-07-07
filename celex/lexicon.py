@@ -41,6 +41,20 @@ class Lexicon:
     def __repr__(self):
         return f'Lexicon({self.language!r}, {len(self.words)} words)'
 
+    @property
+    def syllables(self):
+        '''Flat list of all syllables across all words, built on first access.'''
+        if not hasattr(self, '_syllables'):
+            self._syllables = [s for w in self.words for s in w.syllables]
+        return self._syllables
+
+    @property
+    def phones(self):
+        '''Flat list of all phones across all words, built on first access.'''
+        if not hasattr(self, '_phones'):
+            self._phones = [p for w in self.words for p in w.phones]
+        return self._phones
+
     def search_words(self, word=None, ipa=None, stress_pattern=None,
                      freq_min=None, freq_max=None):
         '''Return words matching all supplied criteria.
@@ -72,16 +86,12 @@ class Lexicon:
         ipa:    phones as substring (spaces optional)
         stress: exact stress value: "strong", "weak" or "secondary"
         '''
-        results = []
-        for word in self.words:
-            for syllable in word.syllables:
-                if ipa is not None:
-                    query = ipa.replace(' ', '')
-                    if query not in syllable.ipa.replace(' ', ''):
-                        continue
-                if stress is not None and syllable.stress != stress:
-                    continue
-                results.append(syllable)
+        results = self.syllables
+        if ipa is not None:
+            query = ipa.replace(' ', '')
+            results = [s for s in results if query in s.ipa.replace(' ', '')]
+        if stress is not None:
+            results = [s for s in results if s.stress == stress]
         return results
 
     def search_phones(self, ipa=None, position=None, ambisyllabic=None,
@@ -93,25 +103,14 @@ class Lexicon:
         ambisyllabic:  True / False
         stressed:      True if phone must be in a stressed syllable
         '''
-        results = []
-        for word in self.words:
-            for phone in word.phones:
-                if ipa is not None and phone.ipa != ipa:
-                    continue
-                if position is not None:
-                    if position == 'onset' and not phone.onset:
-                        continue
-                    elif position == 'nucleus' and not phone.nucleus:
-                        continue
-                    elif position == 'coda' and not phone.coda:
-                        continue
-                if ambisyllabic is not None \
-                        and phone.ambisyllabic != ambisyllabic:
-                    continue
-                if stressed is not None:
-                    in_stressed = (phone.syllable is not None
-                        and phone.syllable.stressed)
-                    if in_stressed != stressed:
-                        continue
-                results.append(phone)
+        results = self.phones
+        if ipa is not None:
+            results = [p for p in results if p.ipa == ipa]
+        if position is not None:
+            results = [p for p in results if getattr(p, position)]
+        if ambisyllabic is not None:
+            results = [p for p in results if p.ambisyllabic == ambisyllabic]
+        if stressed is not None:
+            results = [p for p in results
+                if p.syllable is not None and p.syllable.stressed == stressed]
         return results

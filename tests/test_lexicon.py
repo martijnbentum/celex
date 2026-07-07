@@ -276,6 +276,38 @@ def test_search_phones_no_match(small_lexicon):
 
 
 # ---------------------------------------------------------------------------
+# syllables and phones properties
+# ---------------------------------------------------------------------------
+
+def test_syllables_flat_list(small_lexicon):
+    expected = [s for w in small_lexicon.words for s in w.syllables]
+    assert small_lexicon.syllables == expected
+
+
+def test_syllables_cached(small_lexicon):
+    assert small_lexicon.syllables is small_lexicon.syllables
+
+
+def test_phones_flat_list(small_lexicon):
+    expected = [p for w in small_lexicon.words for p in w.phones]
+    assert small_lexicon.phones == expected
+
+
+def test_phones_cached(small_lexicon):
+    assert small_lexicon.phones is small_lexicon.phones
+
+
+def test_syllables_word_membership(small_lexicon):
+    for syllable in small_lexicon.syllables:
+        assert syllable in syllable.word.syllables
+
+
+def test_phones_word_membership(small_lexicon):
+    for phone in small_lexicon.phones:
+        assert phone in phone.word.phones
+
+
+# ---------------------------------------------------------------------------
 # repr
 # ---------------------------------------------------------------------------
 
