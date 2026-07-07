@@ -139,6 +139,27 @@ def test_ambisyllabic(dutch_header):
     assert phone.onset
 
 
+def test_surface_phones_and_weight(dutch_header, german_header):
+    word = parse_line(aagtappel, dutch_header, 'dutch')
+    first, second, third = word.syllables
+    assert [p.disc for p in second.phones] == ['A']
+    assert [p.disc for p in second.surface_phones] == ['A', 'p']
+    assert [p.disc for p in second.surface_rhyme] == ['A', 'p']
+    assert second.weight == 'light'
+    assert second.surface_weight == 'heavy'
+    assert first.surface_phones == first.phones
+    assert first.surface_weight == first.weight
+    assert third.surface_phones == third.phones
+    shared = word.phones[4]
+    assert shared.syllables == [second, third]
+    assert word.phones[0].syllables == [first]
+    word = parse_line(abbestellen, german_header, 'german')
+    syllable = word.syllables[2]
+    assert syllable.disc == 'StE'
+    assert syllable.weight == 'light'
+    assert syllable.surface_weight == 'heavy'
+
+
 def test_multiword(dutch_header):
     word = parse_line(aap_na, dutch_header, 'dutch')
     assert word.multiword is True

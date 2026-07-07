@@ -1,4 +1,19 @@
-'''Object model for CELEX words, syllables and phones.'''
+'''Object model for CELEX words, syllables and phones.
+
+The hierarchy is a tree: each phone belongs to one syllable and each
+syllable to one word. Ambisyllabic phones (nested brackets in the
+source, e.g. [A[p]@l]) are stored in the following syllable's onset
+and flagged; the surface_* properties expose the sharing without
+breaking the tree.
+
+Note for later: a richer alternative is a parallel timing tier in the
+spirit of CV phonology, a word-level sequence of cv slots linked
+many-to-many to phones. Ambisyllabicity and long vowels (one phone,
+two V slots) then become links instead of flags. Such a tier could
+exist in parallel to the current hierarchy without changing it: slots
+would reference phones and leave the phone-syllable-word links as they
+are. Not needed so far.
+'''
 
 from phone_mapper import disc_to_ipa, ipa_to_definition
 
@@ -97,6 +112,19 @@ class Syllable:
         return self.stress in ('strong', 'secondary')
 
     @property
+    def prev(self):
+        '''The previous syllable in the word, None at the word start.'''
+        if self.word is None or not self.index: return None
+        return self.word.syllables[self.index - 1]
+
+    @property
+    def next(self):
+        '''The next syllable in the word, None at the word end.'''
+        if self.word is None or self.index is None: return None
+        if self.index + 1 >= len(self.word.syllables): return None
+        return self.word.syllables[self.index + 1]
+
+    @property
     def nucleus(self):
         '''The phones that form the syllable nucleus.'''
         return [phone for phone in self.phones if phone.nucleus]
@@ -125,9 +153,38 @@ class Syllable:
         '''light, heavy or superheavy, from the cv slots in the rhyme
         (the onset is weightless). None for the rare syllable without
         a nucleus, e.g. pst.'''
-        rhyme = self.rhyme
-        if not rhyme: return None
-        slots = len(''.join(phone.cv for phone in rhyme))
+        return self._slot_weight(self.rhyme)
+
+    @property
+    def surface_phones(self):
+        '''The phones of this syllable plus an ambisyllabic phone
+        shared from the next syllable's onset, e.g. the p in [A[p]@l].'''
+        return self.phones + self._shared_phones()
+
+    @property
+    def surface_rhyme(self):
+        '''The rhyme plus shared ambisyllabic phones, which close the
+        syllable.'''
+        return self.rhyme + self._shared_phones()
+
+    @property
+    def surface_weight(self):
+        '''weight with shared ambisyllabic phones counted in the coda,
+        so the p in [A[p]@l] makes the first syllable heavy.'''
+        return self._slot_weight(self.surface_rhyme)
+
+    def _shared_phones(self):
+        '''Ambisyllabic phones in the next syllable's onset.'''
+        following = self.next
+        if following is None: return []
+        shared = []
+        for phone in following.onset:
+            if phone.ambisyllabic: shared.append(phone)
+        return shared
+
+    def _slot_weight(self, phones):
+        if not phones: return None
+        slots = len(''.join(phone.cv for phone in phones))
         if slots == 1: return 'light'
         if slots == 2: return 'heavy'
         return 'superheavy'
@@ -177,6 +234,15 @@ class Phone:
         if self.word is None or self.index is None: return None
         if self.index + 1 >= len(self.word.phones): return None
         return self.word.phones[self.index + 1]
+
+    @property
+    def syllables(self):
+        '''The syllables this phone belongs to: two when ambisyllabic
+        (the preceding syllable first), otherwise one.'''
+        if self.syllable is None: return []
+        if self.ambisyllabic and self.syllable.prev is not None:
+            return [self.syllable.prev, self.syllable]
+        return [self.syllable]
 
     @property
     def nucleus(self):
