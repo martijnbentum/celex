@@ -41,6 +41,20 @@ description of all subfolders.
 
 ## Installation
 
+### Install with `pip`
+
+```bash
+pip install git+https://github.com/martijnbentum/celex.git
+```
+
+### Install with `uv pip`
+
+```bash
+uv pip install git+https://github.com/martijnbentum/celex.git
+```
+
+### Development setup
+
 ```bash
 uv venv .venv --python 3.12
 uv sync
