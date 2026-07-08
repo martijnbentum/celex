@@ -15,7 +15,7 @@ import re
 
 from phone_mapper import celex_to_ipa, disc_to_ipa
 
-from . import locations
+from . import cache, locations
 from .models import Phone, Syllable, Word, phoneme_type
 
 
@@ -51,11 +51,12 @@ celex_token_types = _celex_token_types()
 max_token_length = max(len(token) for token in celex_token_types)
 
 
-def load(language, verbose=True, bad_lines=None):
+def load(language, verbose=True, bad_lines=None, use_cache=True):
     '''Parse the phonology file of a language into Word objects.
     language:    dutch, english or german
     verbose:     print a summary of skipped entries
     bad_lines:   optional list collecting skipped line details
+    use_cache:   read and write the on-disk parse cache (cache.py)
     '''
     if language not in languages:
         m = f'unknown language {language!r}, '
@@ -63,25 +64,37 @@ def load(language, verbose=True, bad_lines=None):
         raise ValueError(m)
     header_path = languages[language]
     path = locations.word_form_path(language)
+    if use_cache:
+        cached = cache.read(f'{language}_words', path)
+        if cached is not None:
+            words, skipped_lines = cached
+            return _loaded(words, skipped_lines, language, verbose,
+                bad_lines)
     header = header_path.read_text().split()
-    words, skipped = [], 0
+    words, skipped_lines = [], []
     with _open_celex_file(language, path, 'word-form') as fin:
         for line_number, line in enumerate(fin, start=1):
             text = line.rstrip('\n')
             word, error = _parse_line_with_error(text, header, language)
             if word is None:
-                skipped += 1
-                if bad_lines is not None:
-                    bad_lines.append({'language': language,
-                        'line_number': line_number, 'line': text,
-                        'error': error})
+                skipped_lines.append({'language': language,
+                    'line_number': line_number, 'line': text,
+                    'error': error})
             else:
                 words.append(word)
-    if verbose and skipped:
-        print(f'skipped {skipped} {language} entries without a '
-            'parsable pronunciation')
     for index, word in enumerate(words):
         word.index = index
+    if use_cache:
+        cache.write(f'{language}_words', path, (words, skipped_lines))
+    return _loaded(words, skipped_lines, language, verbose, bad_lines)
+
+
+def _loaded(words, skipped_lines, language, verbose, bad_lines):
+    '''Report skips and hand back the loaded words.'''
+    if bad_lines is not None: bad_lines.extend(skipped_lines)
+    if verbose and skipped_lines:
+        print(f'skipped {len(skipped_lines)} {language} entries without '
+            'a parsable pronunciation')
     return words
 
 
@@ -310,14 +323,20 @@ def _int_field(fields, name):
         raise ParseError(f'invalid integer in {name!r}: {fields[name]!r}')
 
 
-def load_lemmas(language, verbose=True):
+def load_lemmas(language, verbose=True, use_cache=True):
     '''Parse the phonology lemma file (DPL/EPL/GPL) into a {id: Word} dict.
     language:    dutch, english or german
     verbose:     print a summary of skipped entries
+    use_cache:   read and write the on-disk parse cache (cache.py)
     '''
     if language not in _lemma_paths:
         raise ValueError(f'unknown language {language!r}')
     path = _lemma_paths[language] or locations.lemma_path(language)
+    if use_cache:
+        cached = cache.read(f'{language}_lemmas', path)
+        if cached is not None:
+            lemmas, skipped = cached
+            return _loaded_lemmas(lemmas, skipped, language, verbose)
     parsers = {
         'dutch':   _parse_dutch_lemma_line,
         'english': _parse_english_lemma_line,
@@ -332,6 +351,13 @@ def load_lemmas(language, verbose=True):
             else:
                 lemma_id, word = result
                 lemmas[lemma_id] = word
+    if use_cache:
+        cache.write(f'{language}_lemmas', path, (lemmas, skipped))
+    return _loaded_lemmas(lemmas, skipped, language, verbose)
+
+
+def _loaded_lemmas(lemmas, skipped, language, verbose):
+    '''Report skips and hand back the loaded lemmas.'''
     if verbose and skipped:
         print(f'skipped {skipped} {language} lemma entries without a '
             'parsable pronunciation')

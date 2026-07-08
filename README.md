@@ -39,6 +39,24 @@ CELEX_DATA/
 `CELEX_DATA/` is gitignored. See `NOTES/celex_data_structure.md` for a
 description of all subfolders.
 
+## Parse cache
+
+Parsing a full language file takes ~14 seconds, so `load()`,
+`load_lemmas()` and `Lexicon` cache their results as pickles in
+`~/.cache/celex`, keyed on the data file's modification time and
+size. A cached load is roughly 2-3x faster. Expect ~270 MB per
+language; each language uses one fixed cache file that is
+overwritten when the data or parser changes, so the cache never
+grows beyond one file per language.
+
+Set the `CELEX_CACHE` environment variable to relocate the cache, or
+pass `use_cache=False` to skip it:
+
+```python
+words = celex.load('dutch', use_cache=False)
+lexicon = celex.Lexicon('dutch', use_cache=False)
+```
+
 ## Installation
 
 ### Install with `pip`

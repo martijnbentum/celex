@@ -10,6 +10,14 @@ def celex_data_path():
     return Path(__file__).parent.parent / 'CELEX_DATA'
 
 
+def cache_dir():
+    '''Return the directory for pickled parse results.'''
+    configured = os.environ.get('CELEX_CACHE')
+    if configured:
+        return Path(configured).expanduser()
+    return Path.home() / '.cache' / 'celex'
+
+
 _pkg = Path(__file__).parent
 
 

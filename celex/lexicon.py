@@ -21,10 +21,12 @@ class Lexicon:
     '''All words from one CELEX language file, with linked lemmas and
     siblings and search methods for words, syllables and phones.'''
 
-    def __init__(self, language_name):
+    def __init__(self, language_name, use_cache=True):
         self.language = language_name
+        self._use_cache = use_cache
         self._bad_celex_lines = []
-        self.words = load(language_name, bad_lines=self._bad_celex_lines)
+        self.words = load(language_name, bad_lines=self._bad_celex_lines,
+            use_cache=use_cache)
         self._link_words()
         self._link_siblings()
         self._link_lemmas()
@@ -36,6 +38,7 @@ class Lexicon:
         '''
         lexicon = object.__new__(cls)
         lexicon.language = language
+        lexicon._use_cache = False
         lexicon._bad_celex_lines = []
         lexicon.words = words
         lexicon._link_words()
@@ -66,7 +69,8 @@ class Lexicon:
         '''Attach lemma Word objects when lemma files are available.'''
         if lemmas is _LOAD_LEMMAS:
             try:
-                lemmas = load_lemmas(self.language, verbose=False)
+                lemmas = load_lemmas(self.language, verbose=False,
+                    use_cache=self._use_cache)
             except FileNotFoundError as error:
                 m = str(error)
                 m += '\n\nLemma files are optional for Lexicon loading; '

@@ -67,7 +67,7 @@ def test_words_linked_to_lexicon(small_lexicon):
 def test_lexicon_collects_bad_celex_lines(monkeypatch):
     import celex.lexicon
 
-    def fake_load(language, bad_lines=None):
+    def fake_load(language, bad_lines=None, use_cache=True):
         if bad_lines is not None:
             bad_lines.append({'language': language, 'line_number': 7,
                 'line': 'bad', 'error': 'empty pronunciation'})
@@ -75,7 +75,7 @@ def test_lexicon_collects_bad_celex_lines(monkeypatch):
 
     monkeypatch.setattr(celex.lexicon, 'load', fake_load)
     monkeypatch.setattr(celex.lexicon, 'load_lemmas', lambda language,
-        verbose=False: {})
+        verbose=False, use_cache=True: {})
     lexicon = Lexicon('dutch')
     assert lexicon.bad_celex_lines == [{'language': 'dutch',
         'line_number': 7, 'line': 'bad', 'error': 'empty pronunciation'}]

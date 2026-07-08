@@ -261,6 +261,72 @@ def test_load_collects_malformed_bad_lines(monkeypatch, tmp_path,
         "missing required column 'id_number_lemma'")
 
 
+def make_mini_language(monkeypatch, tmp_path, dutch_header, lines):
+    '''Register a mini language backed by a data file in tmp_path.'''
+    data_file = tmp_path / 'DPW.CD'
+    data_file.write_text('\n'.join(lines) + '\n', encoding='latin-1')
+    header_file = tmp_path / 'dutch_header'
+    header_file.write_text(' '.join(dutch_header), encoding='latin-1')
+    monkeypatch.setitem(languages, 'mini', header_file)
+    monkeypatch.setattr(celex.locations, 'word_form_path',
+        lambda language: data_file)
+    return data_file
+
+
+def test_load_writes_and_reads_cache(monkeypatch, tmp_path, dutch_header):
+    import celex.parser
+
+    make_mini_language(monkeypatch, tmp_path, dutch_header, [aagje, aafje])
+    words = load('mini', verbose=False)
+    assert (tmp_path / 'celex_cache' / 'mini_words.pickle').exists()
+
+    def fail(*args): raise AssertionError('parsed instead of cache read')
+    monkeypatch.setattr(celex.parser, '_parse_line_with_error', fail)
+    bad_lines = []
+    cached = load('mini', verbose=False, bad_lines=bad_lines)
+    assert [word.word for word in cached] == [word.word for word in words]
+    assert bad_lines[0]['error'] == 'empty pronunciation'
+
+
+def test_cache_invalidated_when_data_changes(monkeypatch, tmp_path,
+        dutch_header):
+    data_file = make_mini_language(monkeypatch, tmp_path, dutch_header,
+        [aagje])
+    words = load('mini', verbose=False)
+    assert [word.word for word in words] == ['Aagje']
+    data_file.write_text(aagtappel + '\n', encoding='latin-1')
+    words = load('mini', verbose=False)
+    assert [word.word for word in words] == ['aagtappel']
+
+
+def test_load_without_cache_writes_no_cache_file(monkeypatch, tmp_path,
+        dutch_header):
+    make_mini_language(monkeypatch, tmp_path, dutch_header, [aagje])
+    words = load('mini', verbose=False, use_cache=False)
+    assert [word.word for word in words] == ['Aagje']
+    assert not (tmp_path / 'celex_cache').exists()
+
+
+def test_corrupt_cache_falls_back_to_parsing(monkeypatch, tmp_path,
+        dutch_header):
+    make_mini_language(monkeypatch, tmp_path, dutch_header, [aagje])
+    cache_dir = tmp_path / 'celex_cache'
+    cache_dir.mkdir()
+    (cache_dir / 'mini_words.pickle').write_bytes(b'not a pickle')
+    words = load('mini', verbose=False)
+    assert [word.word for word in words] == ['Aagje']
+
+
+def test_cache_overwritten_in_place(monkeypatch, tmp_path, dutch_header):
+    data_file = make_mini_language(monkeypatch, tmp_path, dutch_header,
+        [aagje])
+    load('mini', verbose=False)
+    data_file.write_text(aagtappel + '\n', encoding='latin-1')
+    load('mini', verbose=False)
+    cache_files = list((tmp_path / 'celex_cache').iterdir())
+    assert [path.name for path in cache_files] == ['mini_words.pickle']
+
+
 def test_affricate_versus_cluster(dutch_header):
     '''ts in plaats is t plus s, disc decides the tokenization.'''
     word = parse_line(plaats, dutch_header, 'dutch')
