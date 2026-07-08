@@ -6,7 +6,7 @@ from celex.training_data import training_examples, word_to_example
 
 
 def read_header(language):
-    return languages[language][1].read_text().split()
+    return languages[language].read_text().split()
 
 
 @pytest.fixture(scope='module')

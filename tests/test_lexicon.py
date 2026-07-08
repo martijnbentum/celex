@@ -21,7 +21,7 @@ dpl_aagtappel = ("7\\aagtappel\\0\\'axt-A-p@l\\[VVCC][V[C]VC]\\[a:xt][A[p]@l]"
 
 
 def dutch_header():
-    return languages['dutch'][1].read_text().split()
+    return languages['dutch'].read_text().split()
 
 
 def _make_words():

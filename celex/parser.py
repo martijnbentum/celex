@@ -24,14 +24,14 @@ class ParseError(ValueError):
 
 
 languages = {
-    'dutch': (locations.dutch, locations.dutch_header),
-    'english': (locations.english, locations.english_header),
-    'german': (locations.german, locations.german_header)}
+    'dutch': locations.dutch_header,
+    'english': locations.english_header,
+    'german': locations.german_header}
 
 _lemma_paths = {
-    'dutch':   locations.dutch_lemma,
-    'english': locations.english_lemma,
-    'german':  locations.german_lemma,
+    'dutch': None,
+    'english': None,
+    'german': None,
 }
 
 _required_fields = {
@@ -61,7 +61,8 @@ def load(language, verbose=True, bad_lines=None):
         m = f'unknown language {language!r}, '
         m += "expected 'dutch', 'english' or 'german'"
         raise ValueError(m)
-    path, header_path = languages[language]
+    header_path = languages[language]
+    path = locations.word_form_path(language)
     header = header_path.read_text().split()
     words, skipped = [], 0
     with _open_celex_file(language, path, 'word-form') as fin:
@@ -281,7 +282,7 @@ def load_lemmas(language, verbose=True):
     '''
     if language not in _lemma_paths:
         raise ValueError(f'unknown language {language!r}')
-    path = _lemma_paths[language]
+    path = _lemma_paths[language] or locations.lemma_path(language)
     parsers = {
         'dutch':   _parse_dutch_lemma_line,
         'english': _parse_english_lemma_line,

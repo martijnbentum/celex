@@ -11,17 +11,28 @@ def celex_data_path():
 
 
 _pkg = Path(__file__).parent
-_celex = celex_data_path()
 
-# Phonology word-form files (DPW / EPW / GPW)
-dutch   = _celex / 'DUTCH'   / 'DPW' / 'DPW.CD'
-english = _celex / 'ENGLISH' / 'EPW' / 'EPW.CD'
-german  = _celex / 'GERMAN'  / 'GPW' / 'GPW.CD'
 
-# Phonology lemma files (DPL / EPL / GPL)
-dutch_lemma   = _celex / 'DUTCH'   / 'DPL' / 'DPL.CD'
-english_lemma = _celex / 'ENGLISH' / 'EPL' / 'EPL.CD'
-german_lemma  = _celex / 'GERMAN'  / 'GPL' / 'GPL.CD'
+def word_form_path(language):
+    '''Return the phonology word-form file path for a language.'''
+    paths = {
+        'dutch':   ('DUTCH',   'DPW', 'DPW.CD'),
+        'english': ('ENGLISH', 'EPW', 'EPW.CD'),
+        'german':  ('GERMAN',  'GPW', 'GPW.CD'),
+    }
+    directory, subdirectory, filename = paths[language]
+    return celex_data_path() / directory / subdirectory / filename
+
+
+def lemma_path(language):
+    '''Return the phonology lemma file path for a language.'''
+    paths = {
+        'dutch':   ('DUTCH',   'DPL', 'DPL.CD'),
+        'english': ('ENGLISH', 'EPL', 'EPL.CD'),
+        'german':  ('GERMAN',  'GPL', 'GPL.CD'),
+    }
+    directory, subdirectory, filename = paths[language]
+    return celex_data_path() / directory / subdirectory / filename
 
 # Column-name header files (hand-crafted, bundled with the package)
 dutch_header   = _pkg / 'dutch_header'

@@ -8,7 +8,7 @@ from celex.parser import languages, load, load_lemmas
 
 
 def read_header(language):
-    return languages[language][1].read_text().split()
+    return languages[language].read_text().split()
 
 
 @pytest.fixture(scope='module')
@@ -218,7 +218,11 @@ def test_load_collects_bad_lines(monkeypatch, tmp_path, dutch_header):
     data_file.write_text(aagje + '\n' + aafje + '\n', encoding='latin-1')
     header_file = tmp_path / 'dutch_header'
     header_file.write_text(' '.join(dutch_header), encoding='latin-1')
-    monkeypatch.setitem(languages, 'mini', (data_file, header_file))
+    import celex.locations
+
+    monkeypatch.setitem(languages, 'mini', header_file)
+    monkeypatch.setattr(celex.locations, 'word_form_path',
+        lambda language: data_file)
     bad_lines = []
     try:
         words = load('mini', verbose=False, bad_lines=bad_lines)
@@ -238,7 +242,11 @@ def test_load_collects_malformed_bad_lines(monkeypatch, tmp_path,
         encoding='latin-1')
     header_file = tmp_path / 'dutch_header'
     header_file.write_text(' '.join(dutch_header), encoding='latin-1')
-    monkeypatch.setitem(languages, 'mini', (data_file, header_file))
+    import celex.locations
+
+    monkeypatch.setitem(languages, 'mini', header_file)
+    monkeypatch.setattr(celex.locations, 'word_form_path',
+        lambda language: data_file)
     bad_lines = []
     try:
         words = load('mini', verbose=False, bad_lines=bad_lines)
@@ -322,7 +330,11 @@ def test_load_language_validation():
 
 def test_load_missing_data_message(monkeypatch, tmp_path):
     missing = tmp_path / 'missing' / 'DPW.CD'
-    monkeypatch.setitem(languages, 'missing', (missing, languages['dutch'][1]))
+    import celex.locations
+
+    monkeypatch.setitem(languages, 'missing', languages['dutch'])
+    monkeypatch.setattr(celex.locations, 'word_form_path',
+        lambda language: missing)
     try:
         with pytest.raises(FileNotFoundError) as excinfo:
             load('missing')
@@ -343,7 +355,7 @@ def test_load_lemmas_missing_data_message(monkeypatch, tmp_path):
         with pytest.raises(FileNotFoundError) as excinfo:
             load_lemmas('dutch')
     finally:
-        celex.parser._lemma_paths['dutch'] = celex.locations.dutch_lemma
+        celex.parser._lemma_paths['dutch'] = None
     message = str(excinfo.value)
     assert 'CELEX lemma file not found for dutch' in message
     assert 'Set the CELEX_DATA environment variable' in message
@@ -354,7 +366,7 @@ def test_celex_data_path_default(monkeypatch):
     locations = importlib.reload(celex.locations)
     try:
         assert locations.celex_data_path().name == 'CELEX_DATA'
-        assert locations.dutch.parent.name == 'DPW'
+        assert locations.word_form_path('dutch').parent.name == 'DPW'
     finally:
         importlib.reload(celex.locations)
 
@@ -365,6 +377,19 @@ def test_celex_data_path_env(monkeypatch, tmp_path):
     locations = importlib.reload(celex.locations)
     try:
         assert locations.celex_data_path() == data_path
-        assert locations.dutch == data_path / 'DUTCH' / 'DPW' / 'DPW.CD'
+        assert locations.word_form_path('dutch') == (
+            data_path / 'DUTCH' / 'DPW' / 'DPW.CD')
     finally:
         importlib.reload(celex.locations)
+
+
+def test_load_resolves_celex_data_path_at_call_time(monkeypatch, tmp_path):
+    data_path = tmp_path / 'CELEX_DATA'
+    data_file = data_path / 'DUTCH' / 'DPW' / 'DPW.CD'
+    data_file.parent.mkdir(parents=True)
+    data_file.write_text(aagje + '\n', encoding='latin-1')
+
+    monkeypatch.setenv('CELEX_DATA', str(data_path))
+
+    words = load('dutch', verbose=False)
+    assert [word.word for word in words] == ['Aagje']
