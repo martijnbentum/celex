@@ -241,6 +241,35 @@ def test_search_words_combined(small_lexicon):
         for w in results)
 
 
+def test_word_index_groups_homographs():
+    header = dutch_header()
+    duplicate = aagje.replace("5\\Aagje\\9\\5", "6\\Aagje\\3\\5")
+    words = []
+    for line in (aagje, aagtappel, duplicate):
+        words.append(parse_line(line, header, 'dutch'))
+    lexicon = Lexicon._from_words(words)
+    assert [w.id_number for w in lexicon.word_index['Aagje']] == [5, 6]
+    assert [w.word for w in lexicon.word_index['aagtappel']] == [
+        'aagtappel']
+
+
+def test_search_words_matches_linear_scan(small_lexicon):
+    scan = [w for w in small_lexicon.words if w.word == 'aagtappel']
+    assert small_lexicon.search_words(word='aagtappel') == scan
+
+
+def test_search_words_miss_returns_empty(small_lexicon):
+    assert small_lexicon.search_words(word='nope') == []
+    assert 'nope' not in small_lexicon.word_index
+
+
+def test_search_words_result_mutation_does_not_affect_index(small_lexicon):
+    results = small_lexicon.search_words(word='Aagje')
+    results.append('junk')
+    words = small_lexicon.search_words(word='Aagje')
+    assert [w.word for w in words] == ['Aagje']
+
+
 # ---------------------------------------------------------------------------
 # search_syllables
 # ---------------------------------------------------------------------------

@@ -102,6 +102,17 @@ class Lexicon:
             self._phones = [p for w in self.words for p in w.phones]
         return self._phones
 
+    @property
+    def word_index(self):
+        '''Dict mapping orthography to its words in file order,
+        built on first access.'''
+        if not hasattr(self, '_word_index'):
+            index = defaultdict(list)
+            for word in self.words:
+                index[word.word].append(word)
+            self._word_index = dict(index)
+        return self._word_index
+
     def search_words(self, word=None, ipa=None, stress_pattern=None,
                      freq_min=None, freq_max=None):
         '''Return words matching all supplied criteria.
@@ -111,9 +122,10 @@ class Lexicon:
         stress_pattern: exact match on syllable stress codes, e.g. "s w"
         freq_min/max:   inclusive frequency bounds
         '''
-        results = self.words
         if word is not None:
-            results = [w for w in results if w.word == word]
+            results = list(self.word_index.get(word, []))
+        else:
+            results = self.words
         if ipa is not None:
             query = ipa.replace(' ', '')
             results = [w for w in results
