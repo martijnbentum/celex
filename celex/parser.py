@@ -141,7 +141,9 @@ def _parse_line(line, header, language):
 
 def parse_pronunciation(disc, cv, celex):
     '''Build Syllable objects from the three pronunciation columns.
-    Raises ParseError if the columns cannot be aligned.'''
+    The cv and celex columns must use bracketed CELEX notation, e.g.
+    [a:x][j@] and [VVC][CV]. Raises ParseError if a column is
+    malformed or the columns cannot be aligned.'''
     if not disc: raise ParseError('empty pronunciation')
     syllables = _disc_syllables(disc)
     phones = []
@@ -178,19 +180,41 @@ def _make_phone(disc_character):
     return Phone(disc=disc_character)
 
 
+def _bracketed_characters(text, column_name):
+    '''Flatten a bracketed column into (character, nested) pairs.
+    Raises ParseError on unbalanced brackets or a character outside
+    brackets.'''
+    characters = []
+    depth = 0
+    for index, character in enumerate(text):
+        if character == '[':
+            depth += 1
+        elif character == ']':
+            depth -= 1
+            if depth < 0:
+                m = f'unmatched closing bracket in {column_name} '
+                m += f'column {text!r} at position {index}'
+                raise ParseError(m)
+        elif character in '- ':
+            continue
+        elif depth == 0:
+            m = f'character outside brackets in {column_name} '
+            m += f'column {text!r} at position {index}'
+            raise ParseError(m)
+        else:
+            characters.append((character, depth > 1))
+    if depth:
+        m = f'unclosed bracket in {column_name} column {text!r}'
+        raise ParseError(m)
+    return characters
+
+
 def _celex_characters(celex):
     '''Flatten a celex column into (character, ambisyllabic) pairs.
     Top level brackets delimit syllables; nested brackets mark an
     ambisyllabic phone that is written once but shared by two
     syllables.'''
-    characters = []
-    depth = 0
-    for character in celex:
-        if character == '[': depth += 1
-        elif character == ']': depth -= 1
-        elif character in '- ': continue
-        else: characters.append((character, depth > 1))
-    return characters
+    return _bracketed_characters(celex, 'celex')
 
 
 def _align_celex(phones, characters, phone_index=0, character_index=0):
@@ -217,10 +241,21 @@ def _align_celex(phones, characters, phone_index=0, character_index=0):
 def _check_cv(syllables, cv):
     '''The cv slots derived from the phones must match the cv column.'''
     derived = ''.join(syllable.cv for syllable in syllables)
-    column = re.sub('[^CVS]', '', cv)
+    column = _cv_slots(cv)
     if derived != column:
         m = f'cv mismatch: derived {derived!r}, column {column!r}'
         raise ParseError(m)
+
+
+def _cv_slots(cv):
+    '''Flatten a bracketed cv column into its C/V/S slots.'''
+    slots = []
+    for character, _ in _bracketed_characters(cv, 'cv'):
+        if character not in 'CVS':
+            m = f'unexpected character {character!r} in cv column {cv!r}'
+            raise ParseError(m)
+        slots.append(character)
+    return ''.join(slots)
 
 
 def _parse_english_line(parts, header):

@@ -323,6 +323,33 @@ def test_misaligned_columns_raise():
         parse_pronunciation("'ri-@b", '[CV][VC]', '[ri:][@b]')
 
 
+def test_unmatched_closing_bracket_raises():
+    with pytest.raises(ParseError) as excinfo:
+        parse_pronunciation("'ax-j@", '[VVC][CV]', '[a:x]]j@]')
+    assert 'unmatched closing bracket in celex column' in str(excinfo.value)
+
+
+def test_unclosed_bracket_raises():
+    with pytest.raises(ParseError) as excinfo:
+        parse_pronunciation("'ax-j@", '[VVC][CV]', '[a:x][j@')
+    assert 'unclosed bracket in celex column' in str(excinfo.value)
+
+
+def test_character_outside_brackets_raises():
+    with pytest.raises(ParseError) as excinfo:
+        parse_pronunciation("'ax-j@", '[VVC][CV]', 'a:x[j@]')
+    assert 'character outside brackets in celex column' in str(excinfo.value)
+
+
+def test_malformed_cv_column_raises():
+    with pytest.raises(ParseError) as excinfo:
+        parse_pronunciation("'ax-j@", '[VVC][CX]', '[a:x][j@]')
+    assert "unexpected character 'X' in cv column" in str(excinfo.value)
+    with pytest.raises(ParseError) as excinfo:
+        parse_pronunciation("'ax-j@", '[VVC][CV', '[a:x][j@]')
+    assert 'unclosed bracket in cv column' in str(excinfo.value)
+
+
 def test_load_language_validation():
     with pytest.raises(ValueError):
         load('french')
