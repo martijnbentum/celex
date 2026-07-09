@@ -292,7 +292,7 @@ def _parse_english_line(parts, header):
             continue
         fields = dict(base, disc=disc, cv=cv, celex=celex)
         words.append(_make_word(fields, header, syllables, 'english',
-            status=status))
+            status=status, pronunciation_index=i))
     if not words:
         if not errors: raise ParseError('no pronunciation groups found')
         m = 'no parsable english pronunciation'
@@ -303,7 +303,8 @@ def _parse_english_line(parts, header):
     return word
 
 
-def _make_word(fields, header, syllables, language, status=None):
+def _make_word(fields, header, syllables, language, status=None,
+    record_type='word', pronunciation_index=0):
     '''Build a Word from parsed fields; header[2] is the frequency.'''
     word = fields['word']
     return Word(word=word, id_number=_int_field(fields, 'id_number'),
@@ -311,7 +312,8 @@ def _make_word(fields, header, syllables, language, status=None):
         frequency=_int_field(fields, header[2]), language=language,
         syllables=syllables, multiword=' ' in word,
         pronunciation_status=status, disc=fields['disc'],
-        cv=fields['cv'], celex=fields['celex'])
+        cv=fields['cv'], celex=fields['celex'], record_type=record_type,
+        pronunciation_index=pronunciation_index)
 
 
 def _int_field(fields, name):
@@ -376,7 +378,7 @@ def _parse_dutch_lemma_line(line):
         return None
     word = Word(word=parts[1], id_number=lemma_id, id_number_lemma=lemma_id,
         frequency=int(parts[2]) if parts[2].isdigit() else 0,
-        language='dutch', syllables=syllables)
+        language='dutch', syllables=syllables, record_type='lemma')
     return lemma_id, word
 
 
@@ -394,7 +396,7 @@ def _parse_german_lemma_line(line):
         return None
     word = Word(word=parts[1], id_number=lemma_id, id_number_lemma=lemma_id,
         frequency=int(parts[2]) if parts[2].isdigit() else 0,
-        language='german', syllables=syllables)
+        language='german', syllables=syllables, record_type='lemma')
     return lemma_id, word
 
 
@@ -411,15 +413,16 @@ def _parse_english_lemma_line(line):
         return None
     count = (len(parts) - 4) // 4
     words = []
-    for i in range(count):
-        status, disc, cv, celex = parts[4 + 4 * i:8 + 4 * i]
+    for index in range(count):
+        status, disc, cv, celex = parts[4 + 4 * index:8 + 4 * index]
         try:
             syllables = parse_pronunciation(disc, cv, celex)
         except ParseError:
             continue
         words.append(Word(word=parts[1], id_number=lemma_id,
             id_number_lemma=lemma_id, frequency=cob, language='english',
-            syllables=syllables, pronunciation_status=status))
+            syllables=syllables, pronunciation_status=status,
+            record_type='lemma', pronunciation_index=index))
     if not words: return None
     word = words[0]
     word.pronunciations = words[1:]

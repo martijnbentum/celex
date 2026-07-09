@@ -59,9 +59,12 @@ def test_word_attributes(dutch_header):
     assert word.disc == "'ax-j@"
     assert word.ipa == 'aː x j ə'
     assert word.label == 'Aagje'
+    assert word.key == 'dutch:word:5:p0'
     assert word.stress_pattern == 's w'
     assert len(word.syllables) == 2
     assert len(word.phones) == 4
+    assert word.parent is None
+    assert word.children == word.syllables
 
 
 def test_syllable_attributes(dutch_header):
@@ -71,11 +74,14 @@ def test_syllable_attributes(dutch_header):
     assert second.stress == 'weak' and not second.stressed
     assert first.ipa == 'aː x'
     assert first.label == 'aː x'
+    assert first.key == 'dutch:word:5:p0:syllable:0'
     assert second.label == 'j ə'
     assert first.disc == 'ax'
     assert first.celex == 'a:x'
     assert first.cv == 'VVC'
     assert first.word is word
+    assert first.parent is word
+    assert first.children == first.phones
     assert (first.index, second.index) == (0, 1)
 
 
@@ -116,10 +122,13 @@ def test_phone_attributes(dutch_header):
     assert phone.celex == 'a:'
     assert phone.ipa == 'aː'
     assert phone.label == 'aː'
+    assert phone.key == 'dutch:word:5:p0:phone:0'
     assert phone.phoneme_type == 'vowel'
     assert phone.cv == 'VV'
     assert phone.word is word
     assert phone.syllable is word.syllables[0]
+    assert phone.parent is word.syllables[0]
+    assert phone.children == []
     assert phone.nucleus and not phone.onset and not phone.coda
     coda = word.phones[1]
     assert coda.phoneme_type == 'consonant'
@@ -361,6 +370,12 @@ def test_english_pronunciation_variants(english_header):
     assert word.pronunciation_status == 'P'
     assert word.ipa == 'r ɪ ð ə m'
     assert len(word.pronunciations) == 3
+    keys = [word.key] + [variant.key for variant in word.pronunciations]
+    assert keys == [
+        'english:word:74336:p0',
+        'english:word:74336:p1',
+        'english:word:74336:p2',
+        'english:word:74336:p3']
     variant = word.pronunciations[0]
     assert variant.pronunciation_status == 'P'
     assert variant.ipa == 'r ɪ ð m̩'

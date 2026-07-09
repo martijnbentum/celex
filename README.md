@@ -103,6 +103,13 @@ lex.search_phones(position='onset')                   # 'onset' | 'nucleus' | 'c
 lex.search_phones(ambisyllabic=True)
 lex.search_phones(stressed=True)                      # phone in a stressed syllable
 
+# query roots - exact matching by default, substring with __contains
+lex.words_query.filter(label='lopen')                 # exact label match
+lex.words_query.filter(label__contains='op')          # substring label match
+lex.words_query.filter(frequency__gte=100)
+lex.syllables_query.filter(label__contains='aː')
+lex.phones_query.filter(label='p', syllable__stressed=True)
+
 # word navigation and lemma links
 word = lex.search_words(word='loopt')[0]
 word.prev, word.next             # neighbours in file order
@@ -120,12 +127,18 @@ words = celex.load('dutch')          # also: 'english', 'german'
 word = words[4]
 
 word.word                # 'aagtappel'
+word.label               # 'aagtappel'
+word.key                 # 'dutch:word:7:p0'
 word.ipa                 # 'aː x t ɑ p ə l'
 word.stress_pattern      # 's w w'   (s strong, w weak, ss secondary)
 word.multiword           # False
 word.frequency           # corpus frequency (inl/cob/mann column)
+word.parent              # None
+word.children            # word.syllables
 
 syllable = word.syllables[0]
+syllable.label           # 'aː x t'
+syllable.key             # 'dutch:word:7:p0:syllable:0'
 syllable.ipa             # 'aː x t'
 syllable.stress          # 'strong' | 'weak' | 'secondary'
 syllable.onset           # phones before the nucleus
@@ -138,8 +151,12 @@ syllable.surface_phones  # phones plus a shared ambisyllabic phone
 syllable.surface_rhyme   # rhyme closed by shared ambisyllabic phones
 syllable.surface_weight  # weight over the surface rhyme
 syllable.prev, syllable.next
+syllable.parent          # word
+syllable.children        # syllable.phones
 
 phone = word.phones[4]
+phone.label              # 'p'
+phone.key                # 'dutch:word:7:p0:phone:4'
 phone.disc               # 'p'
 phone.celex              # 'p'
 phone.ipa                # 'p'
@@ -149,6 +166,8 @@ phone.ambisyllabic       # True (written [A[p]@l] in the source)
 phone.prev, phone.next   # neighbouring phones in the word
 phone.syllable, phone.word
 phone.surface_syllables  # two syllables when ambisyllabic, else one
+phone.parent             # phone.syllable
+phone.children           # []
 ```
 
 The cv timing tier is a parallel structure built lazily from the

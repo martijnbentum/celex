@@ -1,6 +1,6 @@
 import pytest
 
-from celex import Lexicon
+from celex import DoesNotExist, Lexicon, MultipleObjectsReturned
 from celex.parser import _parse_dutch_lemma_line, languages, parse_line
 
 
@@ -118,6 +118,7 @@ def test_lemma_has_phonology(small_lexicon_with_lemmas):
     w = next(w for w in small_lexicon_with_lemmas.words if w.word == 'Aagje')
     assert w.lemma.ipa == 'aː x j ə'
     assert w.lemma.stress_pattern == 's w'
+    assert w.lemma.key == 'dutch:lemma:5:p0'
 
 
 def test_lemma_none_without_lemma_file(small_lexicon):
@@ -268,6 +269,71 @@ def test_search_words_result_mutation_does_not_affect_index(small_lexicon):
     results.append('junk')
     words = small_lexicon.search_words(word='Aagje')
     assert [w.word for w in words] == ['Aagje']
+
+
+# ---------------------------------------------------------------------------
+# query API
+# ---------------------------------------------------------------------------
+
+def test_words_query_exact_label(small_lexicon):
+    results = list(small_lexicon.words_query.filter(label='aagtappel'))
+    assert [word.word for word in results] == ['aagtappel']
+
+
+def test_words_query_label_contains(small_lexicon):
+    exact = list(small_lexicon.words_query.filter(label='aagtappel'))
+    contains = list(small_lexicon.words_query.filter(
+        label__contains='aagtappel'))
+    assert [word.word for word in exact] == ['aagtappel']
+    assert [word.word for word in contains] == [
+        'aagtappel', 'aagtappelen']
+
+
+def test_query_numeric_lookup(small_lexicon):
+    results = list(small_lexicon.words_query.filter(frequency__gte=1))
+    assert all(word.frequency >= 1 for word in results)
+    assert any(word.word == 'Aagje' for word in results)
+
+
+def test_query_nested_list_relation(small_lexicon):
+    results = list(small_lexicon.words_query.filter(
+        syllables__label__contains='j ə'))
+    assert [word.word for word in results] == ['Aagje']
+
+
+def test_syllables_query_label_contains(small_lexicon):
+    results = list(small_lexicon.syllables_query.filter(
+        label__contains='aː'))
+    assert all('aː' in syllable.label for syllable in results)
+    assert len(results) > 0
+
+
+def test_phones_query_exact_label(small_lexicon):
+    results = list(small_lexicon.phones_query.filter(label='aː'))
+    assert all(phone.label == 'aː' for phone in results)
+    assert len(results) > 0
+
+
+def test_query_get_and_get_or_none(small_lexicon):
+    word = small_lexicon.words_query.get(label='Aagje')
+    assert word.word == 'Aagje'
+    assert small_lexicon.words_query.get_or_none(label='missing') is None
+
+
+def test_query_get_raises_for_missing(small_lexicon):
+    with pytest.raises(DoesNotExist):
+        small_lexicon.words_query.get(label='missing')
+
+
+def test_query_get_raises_for_multiple():
+    header = dutch_header()
+    duplicate = aagje.replace("5\\Aagje\\9\\5", "6\\Aagje\\3\\5")
+    words = []
+    for line in (aagje, duplicate):
+        words.append(parse_line(line, header, 'dutch'))
+    lexicon = Lexicon._from_words(words)
+    with pytest.raises(MultipleObjectsReturned):
+        lexicon.words_query.get(label='Aagje')
 
 
 # ---------------------------------------------------------------------------

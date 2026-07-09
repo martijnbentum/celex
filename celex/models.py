@@ -32,7 +32,8 @@ class Word:
 
     def __init__(self, word=None, id_number=None, id_number_lemma=None,
         frequency=None, language=None, syllables=None, multiword=False,
-        pronunciation_status=None, disc=None, cv=None, celex=None):
+        pronunciation_status=None, disc=None, cv=None, celex=None,
+        record_type='word', pronunciation_index=0):
         self.word = word
         self.id_number = id_number
         self.id_number_lemma = id_number_lemma
@@ -43,6 +44,8 @@ class Word:
         self.disc = disc
         self.cv = cv
         self.celex = celex
+        self.record_type = record_type
+        self.pronunciation_index = pronunciation_index
         self.lexicon = None
         self.index = None
         self.lemma = None
@@ -74,6 +77,26 @@ class Word:
     def label(self):
         '''The display label for this word.'''
         return self.word
+
+    @property
+    def key(self):
+        '''Stable lexical key for this word record.'''
+        language = self.language or 'unknown'
+        record_type = getattr(self, 'record_type', 'word')
+        record_id = self.id_number
+        if record_id is None: record_id = 'unknown'
+        pronunciation_index = getattr(self, 'pronunciation_index', 0)
+        return f'{language}:{record_type}:{record_id}:p{pronunciation_index}'
+
+    @property
+    def parent(self):
+        '''Words are the root lexical objects.'''
+        return None
+
+    @property
+    def children(self):
+        '''The syllables in this word.'''
+        return self.syllables
 
     @property
     def timing(self):
@@ -135,6 +158,24 @@ class Syllable:
     def label(self):
         '''Space separated labels of the phones in this syllable.'''
         return ' '.join(phone.label for phone in self.phones)
+
+    @property
+    def key(self):
+        '''Stable lexical key for this syllable.'''
+        index = self.index
+        if index is None: index = 'unknown'
+        if self.word is None: return f'unbound:syllable:{index}'
+        return f'{self.word.key}:syllable:{index}'
+
+    @property
+    def parent(self):
+        '''The word containing this syllable.'''
+        return self.word
+
+    @property
+    def children(self):
+        '''The phones in this syllable.'''
+        return self.phones
 
     @property
     def disc(self):
@@ -253,6 +294,24 @@ class Phone:
     def label(self):
         '''The display label for this phone.'''
         return self.ipa
+
+    @property
+    def key(self):
+        '''Stable lexical key for this phone.'''
+        index = self.index
+        if index is None: index = 'unknown'
+        if self.word is None: return f'unbound:phone:{index}'
+        return f'{self.word.key}:phone:{index}'
+
+    @property
+    def parent(self):
+        '''The syllable containing this phone.'''
+        return self.syllable
+
+    @property
+    def children(self):
+        '''Phones have no lexical children.'''
+        return []
 
     @property
     def phoneme_type(self):

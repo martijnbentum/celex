@@ -4,6 +4,7 @@ import warnings
 from collections import defaultdict
 
 from .parser import load, load_lemmas
+from .query import QuerySet
 
 
 _LOAD_LEMMAS = object()
@@ -112,6 +113,21 @@ class Lexicon:
                 index[word.word].append(word)
             self._word_index = dict(index)
         return self._word_index
+
+    @property
+    def words_query(self):
+        '''Query root for words in this lexicon.'''
+        return QuerySet(self.words)
+
+    @property
+    def syllables_query(self):
+        '''Query root for syllables in this lexicon.'''
+        return QuerySet(self.syllables)
+
+    @property
+    def phones_query(self):
+        '''Query root for phones in this lexicon.'''
+        return QuerySet(self.phones)
 
     def search_words(self, word=None, ipa=None, stress_pattern=None,
                      freq_min=None, freq_max=None):
