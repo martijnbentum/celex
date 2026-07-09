@@ -58,6 +58,7 @@ def test_word_attributes(dutch_header):
     assert word.multiword is False
     assert word.disc == "'ax-j@"
     assert word.ipa == 'aː x j ə'
+    assert word.label == 'Aagje'
     assert word.stress_pattern == 's w'
     assert len(word.syllables) == 2
     assert len(word.phones) == 4
@@ -69,6 +70,8 @@ def test_syllable_attributes(dutch_header):
     assert first.stress == 'strong' and first.stressed
     assert second.stress == 'weak' and not second.stressed
     assert first.ipa == 'aː x'
+    assert first.label == 'aː x'
+    assert second.label == 'j ə'
     assert first.disc == 'ax'
     assert first.celex == 'a:x'
     assert first.cv == 'VVC'
@@ -112,6 +115,7 @@ def test_phone_attributes(dutch_header):
     assert phone.disc == 'a'
     assert phone.celex == 'a:'
     assert phone.ipa == 'aː'
+    assert phone.label == 'aː'
     assert phone.phoneme_type == 'vowel'
     assert phone.cv == 'VV'
     assert phone.word is word

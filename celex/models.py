@@ -71,6 +71,11 @@ class Word:
         return ' '.join(phone.ipa for phone in self.phones)
 
     @property
+    def label(self):
+        '''The display label for this word.'''
+        return self.word
+
+    @property
     def timing(self):
         '''The cv timing tier, built on first access.'''
         if not hasattr(self, '_timing'): self._timing = TimingTier(self)
@@ -125,6 +130,11 @@ class Syllable:
     def ipa(self):
         '''Space separated ipa symbols of the phones in this syllable.'''
         return ' '.join(phone.ipa for phone in self.phones)
+
+    @property
+    def label(self):
+        '''Space separated labels of the phones in this syllable.'''
+        return ' '.join(phone.label for phone in self.phones)
 
     @property
     def disc(self):
@@ -238,6 +248,11 @@ class Phone:
         m += f'{B}disc {RE}{self.disc} | '
         m += f'{B}type {RE}{self.phoneme_type}'
         return m
+
+    @property
+    def label(self):
+        '''The display label for this phone.'''
+        return self.ipa
 
     @property
     def phoneme_type(self):
