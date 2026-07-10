@@ -25,10 +25,16 @@ LOOKUPS = {
 
 
 class QuerySet:
-    '''Filter, exclude and order a fixed list of CELEX objects.'''
+    '''Filter, exclude and order a fixed list of CELEX objects.
 
-    def __init__(self, items, filters=None, excludes=None, ordering=None):
-        self._items = list(items)
+    Derived query sets share the item list instead of copying it, and
+    the result is computed once on first use and reused; both are safe
+    because items, lookups and ordering never change after creation.
+    '''
+
+    def __init__(self, items, filters=None, excludes=None, ordering=None,
+        _shared=False):
+        self._items = items if _shared else list(items)
         self._filters = filters or []
         self._excludes = excludes or []
         self._ordering = ordering
@@ -36,7 +42,7 @@ class QuerySet:
     def all(self):
         '''Return a copy of this query set.'''
         return QuerySet(self._items, self._filters, self._excludes,
-            self._ordering)
+            self._ordering, _shared=True)
 
     def to_list(self):
         '''Materialize this query set as a list.'''
@@ -45,16 +51,17 @@ class QuerySet:
     def filter(self, **kwargs):
         '''Return objects matching all lookup arguments.'''
         return QuerySet(self._items, self._filters + [kwargs],
-            self._excludes, self._ordering)
+            self._excludes, self._ordering, _shared=True)
 
     def exclude(self, **kwargs):
         '''Return objects that do not match the lookup arguments.'''
         return QuerySet(self._items, self._filters,
-            self._excludes + [kwargs], self._ordering)
+            self._excludes + [kwargs], self._ordering, _shared=True)
 
     def order_by(self, *fields):
         '''Return objects ordered by one or more attribute paths.'''
-        return QuerySet(self._items, self._filters, self._excludes, fields)
+        return QuerySet(self._items, self._filters, self._excludes, fields,
+            _shared=True)
 
     def get(self, **kwargs):
         '''Return exactly one object matching lookup arguments.'''
@@ -74,7 +81,8 @@ class QuerySet:
             return None
 
     def _apply(self):
-        items = list(self._items)
+        if hasattr(self, '_results'): return self._results
+        items = self._items
         for kwargs in self._filters:
             items = _filter_items(items, kwargs)
         for kwargs in self._excludes:
@@ -82,7 +90,8 @@ class QuerySet:
         if self._ordering:
             items = sorted(items, key=lambda item: _sort_key(item,
                 self._ordering))
-        return items
+        self._results = items
+        return self._results
 
     def __iter__(self):
         return iter(self._apply())

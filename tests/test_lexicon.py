@@ -1,6 +1,6 @@
 import pytest
 
-from celex import DoesNotExist, Lexicon, MultipleObjectsReturned
+from celex import DoesNotExist, Lexicon, MultipleObjectsReturned, QuerySet
 from celex.parser import _parse_dutch_lemma_line, languages, parse_line
 
 
@@ -425,6 +425,40 @@ def test_query_get_raises_for_multiple():
     lexicon = Lexicon._from_words(words)
     with pytest.raises(MultipleObjectsReturned):
         lexicon.query.words.get(label='Aagje')
+
+
+# ---------------------------------------------------------------------------
+# query set sharing and memoization
+# ---------------------------------------------------------------------------
+
+def test_queryset_derived_share_items(small_lexicon):
+    qs = small_lexicon.query.words
+    child = qs.filter(label__contains='aag')
+    grandchild = child.exclude(frequency=0)
+    assert child._items is qs._items
+    assert grandchild._items is qs._items
+    assert qs.all()._items is qs._items
+    assert qs.order_by('label')._items is qs._items
+
+
+def test_queryset_root_copies_input(small_lexicon):
+    words = list(small_lexicon.words)
+    qs = QuerySet(words)
+    words.append('extra')
+    assert len(qs) == len(small_lexicon.words)
+
+
+def test_queryset_result_computed_once(small_lexicon):
+    qs = small_lexicon.query.words.filter(label__contains='aag')
+    assert qs._apply() is qs._apply()
+    assert list(qs) == qs._apply()
+
+
+def test_queryset_memoized_parent_fresh_child(small_lexicon):
+    qs = small_lexicon.query.words
+    assert len(qs) == len(small_lexicon.words)
+    child = qs.filter(label='Aagje')
+    assert [word.word for word in child] == ['Aagje']
 
 
 # ---------------------------------------------------------------------------
