@@ -109,6 +109,11 @@ lex.query.phones.filter(position='onset')             # 'onset' | 'nucleus' | 'c
 lex.query.phones.filter(ambisyllabic=True)
 lex.query.phones.filter(stressed=True)                # phone in a stressed syllable
 
+# English: queries cover primary pronunciations only; variant
+# pronunciations live in word.pronunciations and do not appear in
+# the words, syllables or phones query roots
+lex.query.words.get(label='schedule').pronunciations
+
 # word navigation and lemma links
 word = lex.query.words.get(label='loopt')
 word.prev, word.next             # neighbours in file order
