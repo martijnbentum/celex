@@ -3,7 +3,7 @@ import importlib
 import pytest
 
 import celex.locations
-from celex import ParseError, parse_line, parse_pronunciation
+from celex import ParseError, Phone, parse_line, parse_pronunciation
 from celex.parser import languages, load, load_lemmas
 
 
@@ -534,3 +534,13 @@ def test_load_resolves_celex_data_path_at_call_time(monkeypatch, tmp_path):
 
     words = load('dutch', verbose=False)
     assert [word.word for word in words] == ['Aagje']
+
+
+def test_phone_requires_known_disc():
+    '''Direct Phone construction fails clearly instead of with a bare
+    KeyError from the disc_to_ipa lookup.'''
+    with pytest.raises(ValueError) as excinfo:
+        Phone()
+    assert 'unknown disc character None' in str(excinfo.value)
+    with pytest.raises(ValueError):
+        Phone(disc='☃')

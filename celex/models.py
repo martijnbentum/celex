@@ -276,6 +276,10 @@ class Phone:
     '''A single phone linked to its syllable and word.'''
 
     def __init__(self, disc=None, celex=None, ambisyllabic=False):
+        if disc not in disc_to_ipa:
+            m = f'unknown disc character {disc!r}, '
+            m += 'expected a phone_mapper.disc_to_ipa key'
+            raise ValueError(m)
         self.disc = disc
         self.celex = celex
         self.ipa = disc_to_ipa[disc]
