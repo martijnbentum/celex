@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "celex"
-version = "0.0.36"
+version = "0.0.37"
 description = "Parser for the CELEX lexical database (Dutch, English, German)"
 readme = "README.md"
 license = "MIT"

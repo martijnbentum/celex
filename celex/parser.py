@@ -120,7 +120,8 @@ def _open_celex_file(language, path, file_kind):
 
 
 def parse_line(line, header, language):
-    '''Parse one data file line into a Word, or None on failure.'''
+    '''Parse one data file line into a Word, or None when the line is
+    malformed. Unexpected errors propagate instead of being skipped.'''
     word, _ = _parse_line_with_error(line, header, language)
     return word
 
@@ -128,10 +129,6 @@ def parse_line(line, header, language):
 def _parse_line_with_error(line, header, language):
     try:
         return _parse_line(line, header, language), None
-    except ParseError as error:
-        return None, str(error)
-    except KeyError as error:
-        return None, f'missing required column {error.args[0]!r}'
     except ValueError as error:
         return None, str(error)
 

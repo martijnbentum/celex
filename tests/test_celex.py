@@ -274,6 +274,18 @@ def test_load_collects_malformed_bad_lines(monkeypatch, tmp_path,
         "missing required column 'id_number_lemma'")
 
 
+def test_unexpected_keyerror_propagates(monkeypatch, dutch_header):
+    '''Only malformed lines are skipped; a KeyError from e.g. a
+    phone_mapper table gap must crash the load, not be recorded as a
+    bad line, so no partial lexicon gets built or cached.'''
+    import celex.parser
+
+    def boom(*args, **kwargs): raise KeyError('æ')
+    monkeypatch.setattr(celex.parser, 'parse_pronunciation', boom)
+    with pytest.raises(KeyError):
+        parse_line(aagje, dutch_header, 'dutch')
+
+
 def make_mini_language(monkeypatch, tmp_path, dutch_header, lines):
     '''Register a mini language backed by a data file in tmp_path.'''
     data_file = tmp_path / 'DPW.CD'
