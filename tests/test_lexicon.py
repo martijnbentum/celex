@@ -283,6 +283,12 @@ def test_words_query_exact_label(small_lexicon):
     assert [word.word for word in results] == ['aagtappel']
 
 
+def test_query_roots_cached(small_lexicon):
+    assert small_lexicon.words_query is small_lexicon.words_query
+    assert small_lexicon.syllables_query is small_lexicon.syllables_query
+    assert small_lexicon.phones_query is small_lexicon.phones_query
+
+
 def test_words_query_label_contains(small_lexicon):
     exact = list(small_lexicon.words_query.filter(label='aagtappel'))
     contains = list(small_lexicon.words_query.filter(

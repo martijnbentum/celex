@@ -116,18 +116,24 @@ class Lexicon:
 
     @property
     def words_query(self):
-        '''Query root for words in this lexicon.'''
-        return QuerySet(self.words)
+        '''Cached query root for words in this lexicon.'''
+        if not hasattr(self, '_words_query'):
+            self._words_query = QuerySet(self.words)
+        return self._words_query
 
     @property
     def syllables_query(self):
-        '''Query root for syllables in this lexicon.'''
-        return QuerySet(self.syllables)
+        '''Cached query root for syllables in this lexicon.'''
+        if not hasattr(self, '_syllables_query'):
+            self._syllables_query = QuerySet(self.syllables)
+        return self._syllables_query
 
     @property
     def phones_query(self):
-        '''Query root for phones in this lexicon.'''
-        return QuerySet(self.phones)
+        '''Cached query root for phones in this lexicon.'''
+        if not hasattr(self, '_phones_query'):
+            self._phones_query = QuerySet(self.phones)
+        return self._phones_query
 
     def search_words(self, word=None, ipa=None, stress_pattern=None,
                      freq_min=None, freq_max=None):
