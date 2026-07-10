@@ -340,6 +340,27 @@ def test_cache_overwritten_in_place(monkeypatch, tmp_path, dutch_header):
     assert [path.name for path in cache_files] == ['mini_words.pickle']
 
 
+def test_failed_cache_write_keeps_old_cache(monkeypatch, tmp_path,
+        dutch_header):
+    import pickle
+
+    from celex import cache
+
+    data_file = make_mini_language(monkeypatch, tmp_path, dutch_header,
+        [aagje])
+    load('mini', verbose=False)
+    cache_dir = tmp_path / 'celex_cache'
+    before = (cache_dir / 'mini_words.pickle').read_bytes()
+
+    def fail(*args, **kwargs): raise KeyboardInterrupt
+    monkeypatch.setattr(pickle, 'dump', fail)
+    with pytest.raises(KeyboardInterrupt):
+        cache.write('mini_words', data_file, 'payload')
+    assert (cache_dir / 'mini_words.pickle').read_bytes() == before
+    assert [path.name for path in cache_dir.iterdir()] == [
+        'mini_words.pickle']
+
+
 def test_affricate_versus_cluster(dutch_header):
     '''ts in plaats is t plus s, disc decides the tokenization.'''
     word = parse_line(plaats, dutch_header, 'dutch')
