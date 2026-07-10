@@ -114,6 +114,12 @@ lex.query.phones.filter(stressed=True)                # phone in a stressed syll
 # the words, syllables or phones query roots
 lex.query.words.get(label='schedule').pronunciations
 
+# result access
+matches = lex.query.words.filter(label__contains='op')
+matches.first()                  # first match, or None when empty
+matches.count()                  # number of matches
+matches[0], matches[:10]         # indexing and slicing (slice -> list)
+
 # word navigation and lemma links
 word = lex.query.words.get(label='loopt')
 word.prev, word.next             # neighbours in file order

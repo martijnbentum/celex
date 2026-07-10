@@ -456,6 +456,25 @@ def test_queryset_result_computed_once(small_lexicon):
     assert list(qs) == qs._apply()
 
 
+def test_queryset_first_and_count(small_lexicon):
+    qs = small_lexicon.query.words.filter(label__contains='aagtappel')
+    assert qs.first() is list(qs)[0]
+    assert qs.count() == len(qs) == 2
+    empty = small_lexicon.query.words.filter(label='missing')
+    assert empty.first() is None
+    assert empty.count() == 0
+
+
+def test_queryset_indexing_and_slicing(small_lexicon):
+    qs = small_lexicon.query.words.order_by('label')
+    results = list(qs)
+    assert qs[0] is results[0]
+    assert qs[-1] is results[-1]
+    assert qs[:2] == results[:2]
+    with pytest.raises(IndexError):
+        qs[len(results)]
+
+
 def test_queryset_memoized_parent_fresh_child(small_lexicon):
     qs = small_lexicon.query.words
     assert len(qs) == len(small_lexicon.words)

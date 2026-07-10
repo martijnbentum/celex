@@ -80,6 +80,15 @@ class QuerySet:
         except DoesNotExist:
             return None
 
+    def first(self):
+        '''The first object in this query set, or None when empty.'''
+        results = self._apply()
+        return results[0] if results else None
+
+    def count(self):
+        '''The number of objects in this query set.'''
+        return len(self._apply())
+
     def _apply(self):
         if hasattr(self, '_results'): return self._results
         items = self._items
@@ -101,6 +110,10 @@ class QuerySet:
 
     def __contains__(self, item):
         return item in self._apply()
+
+    def __getitem__(self, index):
+        '''Index or slice the query results; a slice returns a list.'''
+        return self._apply()[index]
 
     def __repr__(self):
         return f'<QuerySet n={len(self)}>'
