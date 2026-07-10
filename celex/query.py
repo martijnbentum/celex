@@ -16,6 +16,7 @@ LOOKUPS = {
     'gt',
     'gte',
     'in',
+    'len',
     'lt',
     'lte',
     'startswith',
@@ -131,11 +132,22 @@ def _matches_path(value, parts, lookup_name, expected):
     rest = parts[1:]
     value = getattr(value, attr)
     if isinstance(value, list):
+        if not rest:
+            return _compare_list(value, lookup_name, expected)
         for item in value:
             if _matches_path(item, rest, lookup_name, expected):
                 return True
         return False
     return _matches_path(value, rest, lookup_name, expected)
+
+
+def _compare_list(value, lookup_name, expected):
+    '''Compare a terminal list value.'''
+    if lookup_name == 'exact' and not isinstance(expected, list):
+        message = 'exact lookup on a list value expects a list, '
+        message += f'got {type(expected).__name__}'
+        raise ValueError(message)
+    return _compare(value, lookup_name, expected)
 
 
 def _compare(value, lookup_name, expected):
@@ -150,6 +162,10 @@ def _compare(value, lookup_name, expected):
         if value is None: return False
         return value.endswith(expected)
     if lookup_name == 'in': return value in expected
+    if lookup_name == 'len':
+        if not isinstance(expected, int):
+            raise ValueError('__len lookup expects an integer')
+        return len(value) == expected
     if lookup_name == 'gt': return value > expected
     if lookup_name == 'gte': return value >= expected
     if lookup_name == 'lt': return value < expected

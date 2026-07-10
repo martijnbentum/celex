@@ -304,6 +304,33 @@ def test_query_nested_list_relation(small_lexicon):
     assert [word.word for word in results] == ['Aagje']
 
 
+def test_query_terminal_list_exact(small_lexicon):
+    word = small_lexicon.words[0]
+    results = list(small_lexicon.words_query.filter(
+        syllables=word.syllables))
+    assert results == [word]
+
+
+def test_query_terminal_list_exact_requires_list(small_lexicon):
+    with pytest.raises(ValueError) as excinfo:
+        list(small_lexicon.words_query.filter(syllables='x'))
+    assert 'exact lookup on a list value expects a list' in str(excinfo.value)
+
+
+def test_query_list_contains(small_lexicon):
+    word = small_lexicon.words[0]
+    syllable = word.syllables[0]
+    results = list(small_lexicon.words_query.filter(
+        syllables__contains=syllable))
+    assert results == [word]
+
+
+def test_query_list_len(small_lexicon):
+    results = list(small_lexicon.words_query.filter(syllables__len=2))
+    assert all(len(word.syllables) == 2 for word in results)
+    assert any(word.word == 'Aagje' for word in results)
+
+
 def test_syllables_query_label_contains(small_lexicon):
     results = list(small_lexicon.syllables_query.filter(
         label__contains='aː'))
