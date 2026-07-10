@@ -130,11 +130,13 @@ def test_lemma_none_without_lemma_file(small_lexicon):
 
 
 def test_missing_lemma_file_warns(monkeypatch, tmp_path):
-    import celex.parser
+    import celex.locations
 
     lexicon = Lexicon._from_words(_make_words())
     missing = tmp_path / 'missing' / 'DPL.CD'
-    monkeypatch.setitem(celex.parser._lemma_paths, 'test', missing)
+    monkeypatch.setitem(languages, 'test', languages['dutch'])
+    monkeypatch.setattr(celex.locations, 'lemma_path',
+        lambda language: missing)
     with pytest.warns(RuntimeWarning) as warnings:
         lexicon._link_lemmas()
     message = str(warnings[0].message)

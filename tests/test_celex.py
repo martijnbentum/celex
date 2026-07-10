@@ -492,15 +492,11 @@ def test_load_missing_data_message(monkeypatch, tmp_path):
 
 
 def test_load_lemmas_missing_data_message(monkeypatch, tmp_path):
-    import celex.parser
-
     missing = tmp_path / 'missing' / 'DPL.CD'
-    monkeypatch.setitem(celex.parser._lemma_paths, 'dutch', missing)
-    try:
-        with pytest.raises(FileNotFoundError) as excinfo:
-            load_lemmas('dutch')
-    finally:
-        celex.parser._lemma_paths['dutch'] = None
+    monkeypatch.setattr(celex.locations, 'lemma_path',
+        lambda language: missing)
+    with pytest.raises(FileNotFoundError) as excinfo:
+        load_lemmas('dutch')
     message = str(excinfo.value)
     assert 'CELEX lemma file not found for dutch' in message
     assert 'Set the CELEX_DATA environment variable' in message

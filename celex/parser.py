@@ -28,12 +28,6 @@ languages = {
     'english': locations.english_header,
     'german': locations.german_header}
 
-_lemma_paths = {
-    'dutch': None,
-    'english': None,
-    'german': None,
-}
-
 _required_fields = {
     'dutch': ('id_number', 'id_number_lemma', 'word', 'disc', 'cv', 'celex'),
     'german': ('id_number', 'id_number_lemma', 'word', 'disc', 'cv', 'celex'),
@@ -326,9 +320,11 @@ def load_lemmas(language, verbose=True, use_cache=True):
     verbose:     print a summary of skipped entries
     use_cache:   read and write the on-disk parse cache (cache.py)
     '''
-    if language not in _lemma_paths:
-        raise ValueError(f'unknown language {language!r}')
-    path = _lemma_paths[language] or locations.lemma_path(language)
+    if language not in languages:
+        m = f'unknown language {language!r}, '
+        m += "expected 'dutch', 'english' or 'german'"
+        raise ValueError(m)
+    path = locations.lemma_path(language)
     if use_cache:
         cached = cache.read(f'{language}_lemmas', path)
         if cached is not None:
