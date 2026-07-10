@@ -378,7 +378,8 @@ def _parse_dutch_lemma_line(line):
         return None
     word = Word(word=parts[1], id_number=lemma_id, id_number_lemma=lemma_id,
         frequency=int(parts[2]) if parts[2].isdigit() else 0,
-        language='dutch', syllables=syllables, record_type='lemma')
+        language='dutch', syllables=syllables, disc=disc, cv=cv,
+        celex=celex, record_type='lemma')
     return lemma_id, word
 
 
@@ -396,7 +397,8 @@ def _parse_german_lemma_line(line):
         return None
     word = Word(word=parts[1], id_number=lemma_id, id_number_lemma=lemma_id,
         frequency=int(parts[2]) if parts[2].isdigit() else 0,
-        language='german', syllables=syllables, record_type='lemma')
+        language='german', syllables=syllables, disc=disc, cv=cv,
+        celex=celex, record_type='lemma')
     return lemma_id, word
 
 
@@ -422,7 +424,8 @@ def _parse_english_lemma_line(line):
         words.append(Word(word=parts[1], id_number=lemma_id,
             id_number_lemma=lemma_id, frequency=cob, language='english',
             syllables=syllables, pronunciation_status=status,
-            record_type='lemma', pronunciation_index=index))
+            disc=disc, cv=cv, celex=celex, record_type='lemma',
+            pronunciation_index=index))
     if not words: return None
     word = words[0]
     word.pronunciations = words[1:]

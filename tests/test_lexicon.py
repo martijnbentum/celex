@@ -117,6 +117,9 @@ def test_lemma_head_form(small_lexicon_with_lemmas):
 def test_lemma_has_phonology(small_lexicon_with_lemmas):
     w = next(w for w in small_lexicon_with_lemmas.words if w.word == 'Aagje')
     assert w.lemma.ipa == 'aː x j ə'
+    assert w.lemma.disc == "'ax-j@"
+    assert w.lemma.cv == '[VVC][CV]'
+    assert w.lemma.celex == '[a:x][j@]'
     assert w.lemma.stress_pattern == 's w'
     assert w.lemma.key == 'dutch:lemma:5:p0'
 

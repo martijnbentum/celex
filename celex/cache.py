@@ -14,7 +14,7 @@ import pickle
 
 from . import locations
 
-cache_version = 2
+cache_version = 3
 
 
 def _stamp(data_path):
