@@ -351,6 +351,71 @@ def test_query_get_raises_for_missing(small_lexicon):
         small_lexicon.query.words.get(label='missing')
 
 
+def test_query_none_link_does_not_match(small_lexicon_with_lemmas):
+    results = list(small_lexicon_with_lemmas.query.words.filter(
+        lemma__label='aagtappel'))
+    assert [word.word for word in results] == ['aagtappel', 'aagtappelen']
+
+
+def test_query_exclude_keeps_none_links(small_lexicon_with_lemmas):
+    results = list(small_lexicon_with_lemmas.query.words.exclude(
+        lemma__label='aagtappel'))
+    assert [word.word for word in results] == ['Aagje', 'aap na']
+
+
+def test_query_terminal_none_exact(small_lexicon_with_lemmas):
+    results = list(small_lexicon_with_lemmas.query.words.filter(lemma=None))
+    assert [word.word for word in results] == ['aap na']
+
+
+def test_query_prev_none_and_link(small_lexicon):
+    first = list(small_lexicon.query.words.filter(prev=None))
+    assert first == [small_lexicon.words[0]]
+    second = list(small_lexicon.query.words.filter(prev__label='Aagje'))
+    assert second == [small_lexicon.words[1]]
+
+
+def test_query_isnull(small_lexicon_with_lemmas):
+    unresolved = list(small_lexicon_with_lemmas.query.words.filter(
+        lemma__isnull=True))
+    assert [word.word for word in unresolved] == ['aap na']
+    resolved = list(small_lexicon_with_lemmas.query.words.filter(
+        lemma__isnull=False))
+    assert [word.word for word in resolved] == ['Aagje', 'aagtappel',
+        'aagtappelen']
+
+
+def test_query_isnull_requires_boolean(small_lexicon):
+    with pytest.raises(ValueError) as excinfo:
+        list(small_lexicon.query.words.filter(lemma__isnull=1))
+    assert '__isnull lookup expects a boolean' in str(excinfo.value)
+
+
+def test_query_none_link_ordering_lookup(small_lexicon_with_lemmas):
+    results = list(small_lexicon_with_lemmas.query.words.filter(
+        lemma__frequency__gte=1))
+    assert [word.word for word in results] == ['Aagje']
+
+
+def test_query_terminal_none_ordering_lookup(small_lexicon):
+    assert list(small_lexicon.query.words.filter(
+        pronunciation_status__gt='')) == []
+
+
+def test_query_order_by_none_first(small_lexicon_with_lemmas):
+    results = list(small_lexicon_with_lemmas.query.words.order_by(
+        'lemma__frequency'))
+    assert [word.word for word in results] == ['aap na', 'aagtappel',
+        'aagtappelen', 'Aagje']
+
+
+def test_query_order_by_none_last_descending(small_lexicon_with_lemmas):
+    results = list(small_lexicon_with_lemmas.query.words.order_by(
+        '-lemma__frequency'))
+    assert [word.word for word in results] == ['Aagje', 'aagtappel',
+        'aagtappelen', 'aap na']
+
+
 def test_query_get_raises_for_multiple():
     header = dutch_header()
     duplicate = aagje.replace("5\\Aagje\\9\\5", "6\\Aagje\\3\\5")

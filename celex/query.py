@@ -16,6 +16,7 @@ LOOKUPS = {
     'gt',
     'gte',
     'in',
+    'isnull',
     'len',
     'lt',
     'lte',
@@ -128,6 +129,7 @@ def _split_lookup(lookup):
 def _matches_path(value, parts, lookup_name, expected):
     if not parts:
         return _compare(value, lookup_name, expected)
+    if value is None: return False
     attr = parts[0]
     rest = parts[1:]
     value = getattr(value, attr)
@@ -162,10 +164,15 @@ def _compare(value, lookup_name, expected):
         if value is None: return False
         return value.endswith(expected)
     if lookup_name == 'in': return value in expected
+    if lookup_name == 'isnull':
+        if not isinstance(expected, bool):
+            raise ValueError('__isnull lookup expects a boolean')
+        return (value is None) == expected
     if lookup_name == 'len':
         if not isinstance(expected, int):
             raise ValueError('__len lookup expects an integer')
         return len(value) == expected
+    if value is None: return False
     if lookup_name == 'gt': return value > expected
     if lookup_name == 'gte': return value >= expected
     if lookup_name == 'lt': return value < expected
@@ -177,15 +184,19 @@ def _sort_key(item, ordering):
     keys = []
     for field in ordering:
         if field.startswith('-'):
-            keys.append(_Descending(_resolve_path(item, field[1:])))
+            value = _resolve_path(item, field[1:])
+            keys.append(_Descending((value is not None, value)))
         else:
-            keys.append(_resolve_path(item, field))
+            value = _resolve_path(item, field)
+            keys.append((value is not None, value))
     return tuple(keys)
 
 
 def _resolve_path(item, path):
+    '''Follow an attribute path; a None link resolves to None.'''
     value = item
     for attr in path.split('__'):
+        if value is None: break
         value = getattr(value, attr)
     return value
 

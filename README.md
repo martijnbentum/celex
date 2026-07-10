@@ -94,6 +94,12 @@ lex.query.words.filter(label__contains='op')          # substring label match
 lex.query.words.filter(ipa__contains='aː x')          # IPA substring
 lex.query.words.filter(stress_pattern='s w')
 lex.query.words.filter(frequency__gte=100)
+lex.query.words.filter(lemma__label='aagtappel')      # via linked objects
+lex.query.words.filter(lemma__isnull=True)            # unresolved links
+
+# a None link in a lookup path (e.g. lemma when the lemma file is
+# missing, prev at the file start) never matches instead of raising;
+# order_by sorts None values first (last with '-')
 
 lex.query.syllables.filter(label__contains='aː')
 lex.query.syllables.filter(stress='strong')           # 'strong' | 'weak' | 'secondary'
