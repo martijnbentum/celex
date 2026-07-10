@@ -83,7 +83,7 @@ def test_lexicon_collects_bad_celex_lines(monkeypatch):
     assert len(lexicon.bad_celex_lines) == 1
 
 
-def test_word_index(small_lexicon):
+def test_word_file_order_index(small_lexicon):
     for i, word in enumerate(small_lexicon.words):
         assert word.index == i
 
@@ -207,158 +207,148 @@ def test_siblings_ignore_non_positive_lemma_ids():
 
 
 # ---------------------------------------------------------------------------
-# search_words
-# ---------------------------------------------------------------------------
-
-def test_search_words_orthographic(small_lexicon):
-    results = small_lexicon.search_words(word='Aagje')
-    assert len(results) == 1
-    assert results[0].word == 'Aagje'
-
-
-def test_search_words_ipa_spaced(small_lexicon):
-    results_spaced = small_lexicon.search_words(ipa='aː x')
-    results_plain  = small_lexicon.search_words(ipa='aːx')
-    assert results_spaced == results_plain
-    assert any(w.word == 'Aagje' for w in results_spaced)
-
-
-def test_search_words_ipa_no_false_positives(small_lexicon):
-    assert small_lexicon.search_words(ipa='zzz') == []
-
-
-def test_search_words_stress_pattern(small_lexicon):
-    results = small_lexicon.search_words(stress_pattern='s w')
-    assert all(w.stress_pattern == 's w' for w in results)
-    assert any(w.word == 'Aagje' for w in results)
-
-
-def test_search_words_freq_range(small_lexicon):
-    results = small_lexicon.search_words(freq_min=1, freq_max=10)
-    assert all(1 <= w.frequency <= 10 for w in results)
-    assert any(w.word == 'Aagje' for w in results)
-
-
-def test_search_words_combined(small_lexicon):
-    results = small_lexicon.search_words(stress_pattern='s w', freq_min=5)
-    assert all(w.stress_pattern == 's w' and w.frequency >= 5
-        for w in results)
-
-
-def test_word_index_groups_homographs():
-    header = dutch_header()
-    duplicate = aagje.replace("5\\Aagje\\9\\5", "6\\Aagje\\3\\5")
-    words = []
-    for line in (aagje, aagtappel, duplicate):
-        words.append(parse_line(line, header, 'dutch'))
-    lexicon = Lexicon._from_words(words)
-    assert [w.id_number for w in lexicon.word_index['Aagje']] == [5, 6]
-    assert [w.word for w in lexicon.word_index['aagtappel']] == [
-        'aagtappel']
-
-
-def test_search_words_matches_linear_scan(small_lexicon):
-    scan = [w for w in small_lexicon.words if w.word == 'aagtappel']
-    assert small_lexicon.search_words(word='aagtappel') == scan
-
-
-def test_search_words_miss_returns_empty(small_lexicon):
-    assert small_lexicon.search_words(word='nope') == []
-    assert 'nope' not in small_lexicon.word_index
-
-
-def test_search_words_result_mutation_does_not_affect_index(small_lexicon):
-    results = small_lexicon.search_words(word='Aagje')
-    results.append('junk')
-    words = small_lexicon.search_words(word='Aagje')
-    assert [w.word for w in words] == ['Aagje']
-
-
-# ---------------------------------------------------------------------------
 # query API
 # ---------------------------------------------------------------------------
 
-def test_words_query_exact_label(small_lexicon):
-    results = list(small_lexicon.words_query.filter(label='aagtappel'))
+def test_query_words_exact_label(small_lexicon):
+    results = list(small_lexicon.query.words.filter(label='aagtappel'))
     assert [word.word for word in results] == ['aagtappel']
 
 
-def test_query_roots_cached(small_lexicon):
-    assert small_lexicon.words_query is small_lexicon.words_query
-    assert small_lexicon.syllables_query is small_lexicon.syllables_query
-    assert small_lexicon.phones_query is small_lexicon.phones_query
+def test_query_namespace_cached(small_lexicon):
+    assert small_lexicon.query is small_lexicon.query
+    assert small_lexicon.query.words is small_lexicon.query.words
+    assert small_lexicon.query.syllables is small_lexicon.query.syllables
+    assert small_lexicon.query.phones is small_lexicon.query.phones
 
 
-def test_words_query_label_contains(small_lexicon):
-    exact = list(small_lexicon.words_query.filter(label='aagtappel'))
-    contains = list(small_lexicon.words_query.filter(
+def test_query_words_label_contains(small_lexicon):
+    exact = list(small_lexicon.query.words.filter(label='aagtappel'))
+    contains = list(small_lexicon.query.words.filter(
         label__contains='aagtappel'))
     assert [word.word for word in exact] == ['aagtappel']
     assert [word.word for word in contains] == [
         'aagtappel', 'aagtappelen']
 
 
+def test_query_words_ipa_contains(small_lexicon):
+    results = list(small_lexicon.query.words.filter(ipa__contains='aː x'))
+    assert any(word.word == 'Aagje' for word in results)
+
+
 def test_query_numeric_lookup(small_lexicon):
-    results = list(small_lexicon.words_query.filter(frequency__gte=1))
+    results = list(small_lexicon.query.words.filter(frequency__gte=1))
     assert all(word.frequency >= 1 for word in results)
     assert any(word.word == 'Aagje' for word in results)
 
 
+def test_query_combined_lookups(small_lexicon):
+    results = list(small_lexicon.query.words.filter(
+        stress_pattern='s w', frequency__gte=5))
+    assert all(word.stress_pattern == 's w' and word.frequency >= 5
+        for word in results)
+
+
 def test_query_nested_list_relation(small_lexicon):
-    results = list(small_lexicon.words_query.filter(
+    results = list(small_lexicon.query.words.filter(
         syllables__label__contains='j ə'))
     assert [word.word for word in results] == ['Aagje']
 
 
 def test_query_terminal_list_exact(small_lexicon):
     word = small_lexicon.words[0]
-    results = list(small_lexicon.words_query.filter(
+    results = list(small_lexicon.query.words.filter(
         syllables=word.syllables))
     assert results == [word]
 
 
 def test_query_terminal_list_exact_requires_list(small_lexicon):
     with pytest.raises(ValueError) as excinfo:
-        list(small_lexicon.words_query.filter(syllables='x'))
+        list(small_lexicon.query.words.filter(syllables='x'))
     assert 'exact lookup on a list value expects a list' in str(excinfo.value)
 
 
 def test_query_list_contains(small_lexicon):
     word = small_lexicon.words[0]
     syllable = word.syllables[0]
-    results = list(small_lexicon.words_query.filter(
+    results = list(small_lexicon.query.words.filter(
         syllables__contains=syllable))
     assert results == [word]
 
 
 def test_query_list_len(small_lexicon):
-    results = list(small_lexicon.words_query.filter(syllables__len=2))
+    results = list(small_lexicon.query.words.filter(syllables__len=2))
     assert all(len(word.syllables) == 2 for word in results)
     assert any(word.word == 'Aagje' for word in results)
 
 
-def test_syllables_query_label_contains(small_lexicon):
-    results = list(small_lexicon.syllables_query.filter(
+def test_query_syllables_label_contains(small_lexicon):
+    results = list(small_lexicon.query.syllables.filter(
         label__contains='aː'))
     assert all('aː' in syllable.label for syllable in results)
     assert len(results) > 0
 
 
-def test_phones_query_exact_label(small_lexicon):
-    results = list(small_lexicon.phones_query.filter(label='aː'))
+def test_query_syllables_stress(small_lexicon):
+    results = list(small_lexicon.query.syllables.filter(stress='strong'))
+    assert all(syllable.stress == 'strong' for syllable in results)
+    assert all(syllable.stressed for syllable in results)
+
+
+def test_query_syllables_no_match(small_lexicon):
+    assert list(small_lexicon.query.syllables.filter(
+        stress='nonexistent')) == []
+
+
+def test_query_phones_exact_label(small_lexicon):
+    results = list(small_lexicon.query.phones.filter(label='aː'))
     assert all(phone.label == 'aː' for phone in results)
     assert len(results) > 0
 
 
+def test_query_phones_position(small_lexicon):
+    results = list(small_lexicon.query.phones.filter(position='onset'))
+    assert all(phone.position == 'onset' for phone in results)
+    assert all(phone.onset for phone in results)
+    assert len(results) > 0
+
+
+def test_query_phones_ambisyllabic(small_lexicon):
+    results = list(small_lexicon.query.phones.filter(ambisyllabic=True))
+    assert all(phone.ambisyllabic for phone in results)
+    assert len(results) >= 1
+
+
+def test_query_phones_stressed(small_lexicon):
+    results = list(small_lexicon.query.phones.filter(stressed=True))
+    assert all(phone.stressed for phone in results)
+
+
+def test_query_phones_unstressed(small_lexicon):
+    results = list(small_lexicon.query.phones.filter(stressed=False))
+    assert all(not phone.stressed for phone in results)
+
+
+def test_query_phones_combined(small_lexicon):
+    results = list(small_lexicon.query.phones.filter(
+        position='onset', stressed=True))
+    assert all(phone.position == 'onset' and phone.stressed
+        for phone in results)
+
+
+def test_query_phones_no_match(small_lexicon):
+    assert list(small_lexicon.query.phones.filter(ipa='zzz')) == []
+
+
 def test_query_get_and_get_or_none(small_lexicon):
-    word = small_lexicon.words_query.get(label='Aagje')
+    word = small_lexicon.query.words.get(label='Aagje')
     assert word.word == 'Aagje'
-    assert small_lexicon.words_query.get_or_none(label='missing') is None
+    assert small_lexicon.query.words.get_or_none(label='missing') is None
 
 
 def test_query_get_raises_for_missing(small_lexicon):
     with pytest.raises(DoesNotExist):
-        small_lexicon.words_query.get(label='missing')
+        small_lexicon.query.words.get(label='missing')
 
 
 def test_query_get_raises_for_multiple():
@@ -369,92 +359,7 @@ def test_query_get_raises_for_multiple():
         words.append(parse_line(line, header, 'dutch'))
     lexicon = Lexicon._from_words(words)
     with pytest.raises(MultipleObjectsReturned):
-        lexicon.words_query.get(label='Aagje')
-
-
-# ---------------------------------------------------------------------------
-# search_syllables
-# ---------------------------------------------------------------------------
-
-def test_search_syllables_ipa(small_lexicon):
-    results = small_lexicon.search_syllables(ipa='aː')
-    assert all('aː' in s.ipa.replace(' ', '') for s in results)
-    assert len(results) > 0
-
-
-def test_search_syllables_stress(small_lexicon):
-    results = small_lexicon.search_syllables(stress='strong')
-    assert all(s.stress == 'strong' for s in results)
-    assert all(s.stressed for s in results)
-
-
-def test_search_syllables_combined(small_lexicon):
-    results = small_lexicon.search_syllables(ipa='aː', stress='strong')
-    assert all('aː' in s.ipa.replace(' ', '') and s.stress == 'strong'
-        for s in results)
-
-
-def test_search_syllables_no_match(small_lexicon):
-    assert small_lexicon.search_syllables(stress='nonexistent') == []
-
-
-# ---------------------------------------------------------------------------
-# search_phones
-# ---------------------------------------------------------------------------
-
-def test_search_phones_ipa(small_lexicon):
-    results = small_lexicon.search_phones(ipa='aː')
-    assert all(p.ipa == 'aː' for p in results)
-    assert len(results) > 0
-
-
-def test_search_phones_position_onset(small_lexicon):
-    results = small_lexicon.search_phones(position='onset')
-    assert all(p.onset for p in results)
-    assert len(results) > 0
-
-
-def test_search_phones_position_nucleus(small_lexicon):
-    results = small_lexicon.search_phones(position='nucleus')
-    assert all(p.nucleus for p in results)
-
-
-def test_search_phones_position_coda(small_lexicon):
-    results = small_lexicon.search_phones(position='coda')
-    assert all(p.coda for p in results)
-
-
-def test_search_phones_invalid_position(small_lexicon):
-    with pytest.raises(ValueError) as excinfo:
-        small_lexicon.search_phones(position='word')
-    message = str(excinfo.value)
-    assert "unknown phone position 'word'" in message
-    assert "'coda', 'nucleus', 'onset'" in message
-
-
-def test_search_phones_ambisyllabic(small_lexicon):
-    results = small_lexicon.search_phones(ambisyllabic=True)
-    assert all(p.ambisyllabic for p in results)
-    assert len(results) >= 1
-
-
-def test_search_phones_stressed(small_lexicon):
-    results = small_lexicon.search_phones(stressed=True)
-    assert all(p.syllable.stressed for p in results)
-
-
-def test_search_phones_unstressed(small_lexicon):
-    results = small_lexicon.search_phones(stressed=False)
-    assert all(not p.syllable.stressed for p in results)
-
-
-def test_search_phones_combined(small_lexicon):
-    results = small_lexicon.search_phones(position='onset', stressed=True)
-    assert all(p.onset and p.syllable.stressed for p in results)
-
-
-def test_search_phones_no_match(small_lexicon):
-    assert small_lexicon.search_phones(ipa='zzz') == []
+        lexicon.query.words.get(label='Aagje')
 
 
 # ---------------------------------------------------------------------------

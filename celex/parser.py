@@ -82,8 +82,6 @@ def load(language, verbose=True, bad_lines=None, use_cache=True):
                     'error': error})
             else:
                 words.append(word)
-    for index, word in enumerate(words):
-        word.index = index
     if use_cache:
         cache.write(f'{language}_words', path, (words, skipped_lines))
     return _loaded(words, skipped_lines, language, verbose, bad_lines)

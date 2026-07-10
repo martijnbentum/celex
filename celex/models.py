@@ -350,6 +350,20 @@ class Phone:
         return [self.syllable]
 
     @property
+    def stressed(self):
+        '''Whether this phone is in a stressed syllable.'''
+        return self.syllable is not None and self.syllable.stressed
+
+    @property
+    def position(self):
+        '''The phone's syllable position: onset, nucleus or coda.'''
+        if self.syllable is None: return None
+        if self.onset: return 'onset'
+        if self.nucleus: return 'nucleus'
+        if self.coda: return 'coda'
+        return None
+
+    @property
     def nucleus(self):
         '''Whether this phone is part of the syllable nucleus.'''
         return self.phoneme_type in ('vowel', 'syllabic_consonant')

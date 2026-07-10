@@ -1,4 +1,4 @@
-'''Lexicon: a loaded CELEX language file with word/syllable/phone search.'''
+'''Lexicon: a loaded CELEX language file with query roots.'''
 
 import warnings
 from collections import defaultdict
@@ -8,19 +8,39 @@ from .query import QuerySet
 
 
 _LOAD_LEMMAS = object()
-_PHONE_POSITIONS = {'coda', 'nucleus', 'onset'}
 
 
-def _validate_phone_position(position):
-    if position is None or position in _PHONE_POSITIONS:
-        return
-    valid = "', '".join(sorted(_PHONE_POSITIONS))
-    raise ValueError(f"unknown phone position {position!r}, expected '{valid}'")
+class LexiconQuery:
+    '''Query roots for words, syllables and phones in one lexicon.'''
+
+    def __init__(self, lexicon):
+        self.lexicon = lexicon
+
+    @property
+    def words(self):
+        '''Query words in this lexicon.'''
+        if not hasattr(self, '_words'):
+            self._words = QuerySet(self.lexicon.words)
+        return self._words
+
+    @property
+    def syllables(self):
+        '''Query syllables in this lexicon.'''
+        if not hasattr(self, '_syllables'):
+            self._syllables = QuerySet(self.lexicon.syllables)
+        return self._syllables
+
+    @property
+    def phones(self):
+        '''Query phones in this lexicon.'''
+        if not hasattr(self, '_phones'):
+            self._phones = QuerySet(self.lexicon.phones)
+        return self._phones
 
 
 class Lexicon:
     '''All words from one CELEX language file, with linked lemmas and
-    siblings and search methods for words, syllables and phones.'''
+    siblings and query roots for words, syllables and phones.'''
 
     def __init__(self, language_name, use_cache=True):
         self.language = language_name
@@ -104,95 +124,8 @@ class Lexicon:
         return self._phones
 
     @property
-    def word_index(self):
-        '''Dict mapping orthography to its words in file order,
-        built on first access.'''
-        if not hasattr(self, '_word_index'):
-            index = defaultdict(list)
-            for word in self.words:
-                index[word.word].append(word)
-            self._word_index = dict(index)
-        return self._word_index
-
-    @property
-    def words_query(self):
-        '''Cached query root for words in this lexicon.'''
-        if not hasattr(self, '_words_query'):
-            self._words_query = QuerySet(self.words)
-        return self._words_query
-
-    @property
-    def syllables_query(self):
-        '''Cached query root for syllables in this lexicon.'''
-        if not hasattr(self, '_syllables_query'):
-            self._syllables_query = QuerySet(self.syllables)
-        return self._syllables_query
-
-    @property
-    def phones_query(self):
-        '''Cached query root for phones in this lexicon.'''
-        if not hasattr(self, '_phones_query'):
-            self._phones_query = QuerySet(self.phones)
-        return self._phones_query
-
-    def search_words(self, word=None, ipa=None, stress_pattern=None,
-                     freq_min=None, freq_max=None):
-        '''Return words matching all supplied criteria.
-
-        word:           exact orthographic match
-        ipa:            phones as substring (spaces optional, e.g. "aːx" or "aː x")
-        stress_pattern: exact match on syllable stress codes, e.g. "s w"
-        freq_min/max:   inclusive frequency bounds
-        '''
-        if word is not None:
-            results = list(self.word_index.get(word, []))
-        else:
-            results = self.words
-        if ipa is not None:
-            query = ipa.replace(' ', '')
-            results = [w for w in results
-                if query in w.ipa.replace(' ', '')]
-        if stress_pattern is not None:
-            results = [w for w in results
-                if w.stress_pattern == stress_pattern]
-        if freq_min is not None:
-            results = [w for w in results if w.frequency >= freq_min]
-        if freq_max is not None:
-            results = [w for w in results if w.frequency <= freq_max]
-        return results
-
-    def search_syllables(self, ipa=None, stress=None):
-        '''Return syllables matching all supplied criteria.
-
-        ipa:    phones as substring (spaces optional)
-        stress: exact stress value: "strong", "weak" or "secondary"
-        '''
-        results = self.syllables
-        if ipa is not None:
-            query = ipa.replace(' ', '')
-            results = [s for s in results if query in s.ipa.replace(' ', '')]
-        if stress is not None:
-            results = [s for s in results if s.stress == stress]
-        return results
-
-    def search_phones(self, ipa=None, position=None, ambisyllabic=None,
-                      stressed=None):
-        '''Return phones matching all supplied criteria.
-
-        ipa:           exact ipa symbol, e.g. "p" or "aː"
-        position:      syllable position: "onset", "nucleus" or "coda"
-        ambisyllabic:  True / False
-        stressed:      True if phone must be in a stressed syllable
-        '''
-        _validate_phone_position(position)
-        results = self.phones
-        if ipa is not None:
-            results = [p for p in results if p.ipa == ipa]
-        if position is not None:
-            results = [p for p in results if getattr(p, position)]
-        if ambisyllabic is not None:
-            results = [p for p in results if p.ambisyllabic == ambisyllabic]
-        if stressed is not None:
-            results = [p for p in results
-                if p.syllable is not None and p.syllable.stressed == stressed]
-        return results
+    def query(self):
+        '''Query namespace for words, syllables and phones.'''
+        if not hasattr(self, '_query'):
+            self._query = LexiconQuery(self)
+        return self._query

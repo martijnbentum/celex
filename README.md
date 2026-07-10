@@ -88,30 +88,23 @@ from celex import Lexicon
 lex = Lexicon('dutch')           # also: 'english', 'german'
 lex.words                        # list of Word objects in file order
 
-# search — all arguments are optional and combined with AND
-lex.search_words(word='lopen')                        # exact orthographic match
-lex.search_words(ipa='aː x')                          # IPA substring (spaces optional)
-lex.search_words(stress_pattern='s w')                # exact stress pattern
-lex.search_words(freq_min=1000, freq_max=5000)        # frequency range
-lex.search_words(ipa='p', stress_pattern='s w w')     # combined
-
-lex.search_syllables(ipa='aː')                        # IPA substring
-lex.search_syllables(stress='strong')                 # 'strong' | 'weak' | 'secondary'
-
-lex.search_phones(ipa='p')                            # exact IPA symbol
-lex.search_phones(position='onset')                   # 'onset' | 'nucleus' | 'coda'
-lex.search_phones(ambisyllabic=True)
-lex.search_phones(stressed=True)                      # phone in a stressed syllable
-
 # query roots - exact matching by default, substring with __contains
-lex.words_query.filter(label='lopen')                 # exact label match
-lex.words_query.filter(label__contains='op')          # substring label match
-lex.words_query.filter(frequency__gte=100)
-lex.syllables_query.filter(label__contains='aː')
-lex.phones_query.filter(label='p', syllable__stressed=True)
+lex.query.words.filter(label='lopen')                 # exact label match
+lex.query.words.filter(label__contains='op')          # substring label match
+lex.query.words.filter(ipa__contains='aː x')          # IPA substring
+lex.query.words.filter(stress_pattern='s w')
+lex.query.words.filter(frequency__gte=100)
+
+lex.query.syllables.filter(label__contains='aː')
+lex.query.syllables.filter(stress='strong')           # 'strong' | 'weak' | 'secondary'
+
+lex.query.phones.filter(label='p')                    # exact IPA symbol
+lex.query.phones.filter(position='onset')             # 'onset' | 'nucleus' | 'coda'
+lex.query.phones.filter(ambisyllabic=True)
+lex.query.phones.filter(stressed=True)                # phone in a stressed syllable
 
 # word navigation and lemma links
-word = lex.search_words(word='loopt')[0]
+word = lex.query.words.get(label='loopt')
 word.prev, word.next             # neighbours in file order
 word.lemma                       # Word from the phonology lemma file (DPL/EPL/GPL)
 word.siblings                    # other DPW words sharing the same lemma id
