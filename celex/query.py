@@ -30,19 +30,32 @@ class QuerySet:
     Derived query sets share the item list instead of copying it, and
     the result is computed once on first use and reused; both are safe
     because items, lookups and ordering never change after creation.
+
+    index_fields names attributes whose exact lookups are served from
+    a value-to-items dict instead of a full scan. An index is built
+    lazily on the first exact lookup of its field and shared by
+    derived query sets; every other query shape falls through to the
+    scan unchanged.
     '''
 
     def __init__(self, items, filters=None, excludes=None, ordering=None,
-        _shared=False):
+        _shared=False, index_fields=None, _indexes=None):
         self._items = items if _shared else list(items)
         self._filters = filters or []
         self._excludes = excludes or []
         self._ordering = ordering
+        self._index_fields = index_fields or ()
+        self._indexes = _indexes if _indexes is not None else {}
+
+    def _derive(self, filters, excludes, ordering):
+        '''A query set sharing this one's items and indexes.'''
+        return QuerySet(self._items, filters, excludes, ordering,
+            _shared=True, index_fields=self._index_fields,
+            _indexes=self._indexes)
 
     def all(self):
         '''Return a copy of this query set.'''
-        return QuerySet(self._items, self._filters, self._excludes,
-            self._ordering, _shared=True)
+        return self._derive(self._filters, self._excludes, self._ordering)
 
     def to_list(self):
         '''Materialize this query set as a list.'''
@@ -50,18 +63,17 @@ class QuerySet:
 
     def filter(self, **kwargs):
         '''Return objects matching all lookup arguments.'''
-        return QuerySet(self._items, self._filters + [kwargs],
-            self._excludes, self._ordering, _shared=True)
+        return self._derive(self._filters + [kwargs], self._excludes,
+            self._ordering)
 
     def exclude(self, **kwargs):
         '''Return objects that do not match the lookup arguments.'''
-        return QuerySet(self._items, self._filters,
-            self._excludes + [kwargs], self._ordering, _shared=True)
+        return self._derive(self._filters, self._excludes + [kwargs],
+            self._ordering)
 
     def order_by(self, *fields):
         '''Return objects ordered by one or more attribute paths.'''
-        return QuerySet(self._items, self._filters, self._excludes, fields,
-            _shared=True)
+        return self._derive(self._filters, self._excludes, fields)
 
     def get(self, **kwargs):
         '''Return exactly one object matching lookup arguments.'''
@@ -89,10 +101,34 @@ class QuerySet:
         '''The number of objects in this query set.'''
         return len(self._apply())
 
+    def _index_candidates(self, kwargs):
+        '''Items narrowed via a field index when the first filter has
+        an exact lookup on an indexed field, else all items.'''
+        for lookup, expected in kwargs.items():
+            path, lookup_name = _split_lookup(lookup)
+            if lookup_name != 'exact': continue
+            if path not in self._index_fields: continue
+            try:
+                return self._field_index(path).get(expected, [])
+            except TypeError:
+                continue
+        return self._items
+
+    def _field_index(self, field):
+        '''value -> items dict for a field, built on first use and
+        shared by derived query sets.'''
+        if field not in self._indexes:
+            index = {}
+            for item in self._items:
+                index.setdefault(getattr(item, field), []).append(item)
+            self._indexes[field] = index
+        return self._indexes[field]
+
     def _apply(self):
         if hasattr(self, '_results'): return self._results
         items = self._items
-        for kwargs in self._filters:
+        for position, kwargs in enumerate(self._filters):
+            if position == 0: items = self._index_candidates(kwargs)
             items = _filter_items(items, kwargs)
         for kwargs in self._excludes:
             items = [item for item in items if not _matches_all(item, kwargs)]

@@ -89,6 +89,8 @@ lex = Lexicon('dutch')           # also: 'english', 'german'
 lex.words                        # list of Word objects in file order
 
 # query roots - exact matching by default, substring with __contains
+# exact label and word lookups are served from a lazy index instead
+# of a full scan; other query shapes scan the word list
 lex.query.words.filter(label='lopen')                 # exact label match
 lex.query.words.filter(label__contains='op')          # substring label match
 lex.query.words.filter(ipa__contains='aː x')          # IPA substring
@@ -121,7 +123,9 @@ matches.count()                  # number of matches
 matches[0], matches[:10]         # indexing and slicing (slice -> list)
 
 # word navigation and lemma links
-word = lex.query.words.get(label='loopt')
+# (get raises MultipleObjectsReturned for ambiguous orthographies,
+# e.g. dutch has two 'loopt' entries; use filter + first instead)
+word = lex.query.words.filter(label='loopt').first()
 word.prev, word.next             # neighbours in file order
 word.lemma                       # Word from the phonology lemma file (DPL/EPL/GPL)
 word.siblings                    # other DPW words sharing the same lemma id

@@ -483,6 +483,52 @@ def test_queryset_memoized_parent_fresh_child(small_lexicon):
 
 
 # ---------------------------------------------------------------------------
+# exact-lookup index on the words query root
+# ---------------------------------------------------------------------------
+
+def test_index_matches_scan_results():
+    lexicon = Lexicon._from_words(_make_words())
+    indexed = lexicon.query.words
+    scan = QuerySet(lexicon.words)
+    for label in ('Aagje', 'aagtappel', 'aap na', 'missing'):
+        assert list(indexed.filter(label=label)) == list(
+            scan.filter(label=label))
+    assert 'label' in indexed._indexes
+
+
+def test_index_built_lazily_and_shared():
+    lexicon = Lexicon._from_words(_make_words())
+    root = lexicon.query.words
+    assert root._indexes == {}
+    assert list(root.filter(label__contains='aag'))
+    assert root._indexes == {}          # non-exact lookups never build it
+    child = root.filter(label='Aagje')
+    assert list(child)
+    assert 'label' in root._indexes     # built by child, visible at root
+    assert child._indexes is root._indexes
+
+
+def test_index_only_seeds_first_filter():
+    lexicon = Lexicon._from_words(_make_words())
+    chained = lexicon.query.words.filter(frequency__gte=0).filter(
+        label='Aagje')
+    assert [word.word for word in chained] == ['Aagje']
+
+
+def test_index_with_combined_lookups():
+    lexicon = Lexicon._from_words(_make_words())
+    results = lexicon.query.words.filter(label='Aagje', frequency__gte=100)
+    assert list(results) == []
+    results = lexicon.query.words.filter(label='Aagje', frequency__gte=1)
+    assert [word.word for word in results] == ['Aagje']
+
+
+def test_index_unhashable_expected_falls_back_to_scan():
+    lexicon = Lexicon._from_words(_make_words())
+    assert list(lexicon.query.words.filter(label=['Aagje'])) == []
+
+
+# ---------------------------------------------------------------------------
 # syllables and phones properties
 # ---------------------------------------------------------------------------
 

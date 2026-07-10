@@ -18,9 +18,11 @@ class LexiconQuery:
 
     @property
     def words(self):
-        '''Query words in this lexicon.'''
+        '''Query words in this lexicon. Exact lookups on label and
+        word are index-accelerated (built lazily on first use).'''
         if not hasattr(self, '_words'):
-            self._words = QuerySet(self.lexicon.words)
+            self._words = QuerySet(self.lexicon.words,
+                index_fields=('label', 'word'))
         return self._words
 
     @property
